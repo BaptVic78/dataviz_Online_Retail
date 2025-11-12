@@ -1,0 +1,8 @@
+bokeh==2.4.3
+numpy<1.24
+
+streamlit
+pandas
+scipy
+openpyxl
+plotly 
