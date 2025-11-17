@@ -6,3 +6,7 @@ pandas
 scipy
 openpyxl
 plotly 
+matplotlib
+ipykernel
+seaborn
+pyarrow
