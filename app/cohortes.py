@@ -42,6 +42,8 @@ def plot_retention_heatmap(cohorts_pivot):
 
     st.pyplot(fig, transparent=True, use_container_width=True)
 
+# Ce graphe sert à analyser le panier type des clients en fonction de leur âge de cohorte 
+# on pourra observer qu'un client ancien a un panier moyen plus élevé qu'un clien récent
 def densite(df):
     st.subheader("Analyse de la densité")
     
@@ -93,6 +95,39 @@ def densite(df):
             plt.setp(ax.get_legend().get_texts(), color='white')
 
     st.pyplot(fig, transparent=True, use_container_width=True)
+
+    with st.expander("Interprétation", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### 📉 Points de Vigilance")
+            st.warning(
+                """
+                **1. Décrochage structurel (M+1) :** Environ **75% à 80%** des clients ne reviennent pas après leur premier achat. 
+                L'effort de rétention doit se concentrer sur l'onboarding immédiat.
+                """
+            )
+            st.error(
+                """
+                **2. Alerte Qualité (Déc 2010) :** La cohorte de **2010-12** montre une performance catastrophique 
+                (**12%** de rétention à M+1 contre **38%** l'année précédente).
+                *Hypothèse : Acquisition de mauvaise qualité (chasseurs de primes de Noël).*
+                """
+            )
+        
+        with col2:
+            st.markdown("### 📈 Signaux Positifs")
+            st.success(
+                """
+                **3. Fidélité "Saisonnière" (Effet Anniversaire) :** La cohorte de **2009-12** remonte spectaculairement à **50% de rétention** en Novembre 2010 (M+11).  
+                Cela indique une base de clients fidèles à la marque pour les achats de fin d'année.
+                """
+            )
+            st.info(
+                """
+                **4. Noyau Dur :** Passé le cap des 3 mois, la rétention se stabilise autour de **20-25%**.
+                Ces clients constituent la base saine et récurrente du chiffre d'affaires.
+                """
+            )
 
 def main():
     st.title("Rétentions par Cohortes d'Acquisition")
