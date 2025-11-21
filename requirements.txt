@@ -10,3 +10,16 @@ matplotlib
 ipykernel
 seaborn
 pyarrow
+
+
+streamlit==1.30.0
+pandas==2.1.4
+numpy==1.26.4
+plotly==5.18.0
+
+pyarrow==14.0.2
+fastparquet==2023.8.0
+
+python-dateutil==2.8.2
+pytz==2023.3.post1
+typing-extensions==4.9.0
