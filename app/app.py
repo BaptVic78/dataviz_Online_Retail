@@ -320,7 +320,27 @@ def show_dashboard():
     st.subheader("📤 Export des données filtrées")
     export_filtered_csv(df_f)
 
+   # --- LA NAVIGATION ---
+    st.subheader("Où voulez-vous aller ?")
 
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.markdown("### 📉 Diagnostic")
+        st.write("Analysez la rétention et le comportement par cohorte.")
+        # C'est ici que ça se passe :
+        st.page_link("pages/cohortes.py", label="Voir les Cohortes", icon="📊", use_container_width=True)
+
+    with c2:
+        st.markdown("### 🎯 Segmentation")
+        st.write("Priorisez vos actions grâce à l'analyse RFM.")
+        st.page_link("pages/segments.py", label="Voir les Segments RFM", icon="👥", use_container_width=True)
+
+    with c3:
+        st.markdown("### 🔮 Prédictions")
+        st.write("Simulez vos scénarios de croissance (CLV).")
+        st.page_link("pages/scenarios.py", label="Voir le Simulateur", icon="🚀", use_container_width=True)
+        
 # ------------------------------------------------
 # RUN APP
 # ------------------------------------------------
