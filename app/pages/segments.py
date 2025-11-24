@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 # --- Config page ---
 st.set_page_config(
@@ -24,35 +26,31 @@ df_rfm['Date_Premier_Achat'] = pd.to_datetime(df_rfm['Date_Premier_Achat'])
 
 # --- Construction des segments RFM ---
 def assign_segment(row):
-    r = row['R_Score']
-    f = row['F_Score']
-    m = row['M_Score']
+    score = row['RFM_Pourcentage']
 
-    if (r >= 4) and (f >= 4) and (m >= 4):
+    if score >= 400:
         return "Champions"
-    elif (r >= 4) and (f >= 3):
-        return "Clients fidèles"
-    elif (r == 5) and (f <= 2):
-        return "Nouveaux clients"
-    elif (r <= 2) and (f >= 3):
-        return "À risque"
-    elif (r <= 2) and (f <= 2):
-        return "Perdus"
+    elif 300 <= score <= 399:
+        return "Fidèles"
+    elif 200 <= score <= 299:
+        return "Potentiels"
+    elif 120 <= score <= 199:
+        return "À Risque"
     else:
-        return "Potentiel"
+        return "Perdus"
 
 df_rfm['Segment'] = df_rfm.apply(assign_segment, axis=1)
 
 # --- Priorité d'activation ---
 priority_mapping = {
     "Champions": 1,
-    "À risque": 2,
-    "Clients fidèles": 3,
-    "Potentiel": 4,
-    "Nouveaux clients": 5,
-    "Perdus": 6
+    "Fidèles": 2,
+    "Potentiels": 3,
+    "À Risque": 4,
+    "Perdus": 5
 }
 df_rfm['Priorite'] = df_rfm['Segment'].map(priority_mapping)
+
 
 # --- Paramètres de marge (sidebar) ---
 st.sidebar.header("Paramètres business")
@@ -72,25 +70,58 @@ seg_table = df_rfm.groupby(['Segment', 'Priorite'], as_index=False).agg(
 )
 
 seg_table['Marge'] = seg_table['CA'] * taux_marge
-
 seg_table = seg_table.sort_values('Priorite')
+
+# On prépare le tableau à afficher
+display_df = seg_table[['Segment', 'Volume_clients', 'CA', 'Marge', 'Panier_moyen', 'Priorite']].copy()
+
+# --- Ligne vide ---
+blank_row = pd.DataFrame({
+    'Segment': [''],
+    'Volume_clients': [''],
+    'CA': [''],
+    'Marge': [''],
+    'Panier_moyen': [''],
+    'Priorite': ['']
+})
+
+# --- Ligne TOTAL ---
+total_row = pd.DataFrame({
+    'Segment': ['TOTAL'],
+    'Volume_clients': [df_rfm['Customer ID'].nunique()],      # nb total de clients
+    'CA': [seg_table['CA'].sum()],                            # CA total
+    'Marge': [seg_table['Marge'].sum()],                      # Marge totale
+    'Panier_moyen': [''],                                     # tu peux mettre un global si tu veux
+    'Priorite': ['']
+})
+
+# On concatène : segments + ligne vide + total
+display_df = pd.concat([display_df, blank_row, total_row], ignore_index=True)
 
 # --- Affichage table RFM agrégée ---
 st.subheader("Table RFM par segment")
 
+# Colonnes numériques à formatter
+num_cols = ['CA', 'Marge', 'Panier_moyen']
+
+for col in num_cols:
+    # Convertir en numérique (en gardant les NaN pour la ligne vide)
+    display_df[col] = pd.to_numeric(display_df[col], errors='coerce')
+
+    # Arrondir à 2 décimales
+    display_df[col] = display_df[col].round(2)
+
+    # Appliquer le format 3,994,348.18
+    display_df[col] = display_df[col].map(
+        lambda x: f"{x:,.2f}" if pd.notnull(x) else ""
+    )
+
+
 st.dataframe(
-    seg_table[['Segment', 'Volume_clients', 'CA', 'Marge', 'Panier_moyen', 'Priorite']],
+    display_df,
     use_container_width=True
 )
 
-# --- KPIs globaux ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("CA total", f"{seg_table['CA'].sum():,.0f}")
-with col2:
-    st.metric("Marge totale", f"{seg_table['Marge'].sum():,.0f}")
-with col3:
-    st.metric("Nb clients", int(df_rfm['Customer ID'].nunique()))
 
 # --- Bloc Scénarios / Simulation ---
 st.markdown("---")
@@ -123,6 +154,7 @@ with col_u:
     )
 
 # --- Calcul scénario ---
+# On récupère la ligne du segment ciblé
 seg_row = seg_table[seg_table['Segment'] == segment_cible].iloc[0]
 
 ca_base = seg_row['CA']
@@ -138,6 +170,31 @@ marge_incrementale = ca_incremental * taux_marge
 ca_nouveau = ca_base + ca_incremental
 marge_nouvelle = marge_base + marge_incrementale
 
+
+# --- Camembert CA base vs CA additionnel ---
+st.subheader("Répartition du CA (base vs additionnel)")
+
+labels = ["CA base", "CA additionnel simulé"]
+values = [ca_base, ca_incremental]
+
+# Taille du graphique réduite
+fig, ax = plt.subplots(figsize=(3, 4))  # <-- DIMENSION ICI
+
+ax.pie(
+    values,
+    labels=labels,
+    autopct='%1.1f%%',
+    startangle=90
+)
+ax.axis('equal')
+
+st.pyplot(fig)
+
+
+st.caption(
+    "Logique : CA_additionnel = CA_segment × part_clients_activés × uplift_CA ; "
+    "Marge_additionnelle = CA_additionnel × taux de marge."
+)
 st.markdown(f"### Résultats pour le segment **{segment_cible}**")
 
 c1, c2, c3 = st.columns(3)
@@ -168,8 +225,3 @@ with d2:
         "Marge additionnelle simulée",
         f"{marge_incrementale:,.0f}"
     )
-
-st.caption(
-    "Logique : CA_additionnel = CA_segment × part_clients_activés × uplift_CA ; "
-    "Marge_additionnelle = CA_additionnel × taux de marge."
-)
