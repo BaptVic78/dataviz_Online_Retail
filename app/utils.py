@@ -222,29 +222,3 @@ def plot_average_retention(cohorts_pivot):
     
     st.plotly_chart(fig, use_container_width=True)
 
-def display_retention_kpis(cohorts_pivot):
-    st.subheader("📌 Indicateurs Clés de Rétention")
-    
-    # Moyenne à M+1 (Index 1)
-    retention_m1 = cohorts_pivot[1].mean()
-    
-    # Moyenne à M+12 (Index 12) - on gère le cas où M12 n'existe pas encore
-    if 12 in cohorts_pivot.columns:
-        retention_m12 = cohorts_pivot[12].mean()
-    else:
-        retention_m12 = 0
-        
-    col1, col2, col3 = st.columns(3)
-    
-    col1.metric(
-        label="Rétention Moyenne à M+1", 
-        value=f"{retention_m1:.1%}", 
-        delta="- Choc d'Onboarding", 
-        delta_color="inverse"
-    )
-    
-    col2.metric(
-        label="Rétention Moyenne à M+12", 
-        value=f"{retention_m12:.1%}", 
-        help="Clients encore actifs après 1 an"
-    )

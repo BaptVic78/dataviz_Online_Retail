@@ -16,8 +16,7 @@ def main():
     densite(df)
     plot_retention_curves(cohort_matrix)
     plot_average_retention(cohort_matrix)
-    display_retention_kpis(cohort_matrix)
-
+    
 if __name__ == "__main__":
     main()
 
