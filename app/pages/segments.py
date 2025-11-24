@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 # --- Config page ---
 st.set_page_config(
     page_title="RFM - Online Retail",
@@ -51,8 +50,7 @@ priority_mapping = {
 }
 df_rfm['Priorite'] = df_rfm['Segment'].map(priority_mapping)
 
-
-# --- Paramètres de marge (sidebar) ---
+# --- Paramètres de marge ---
 st.sidebar.header("Paramètres business")
 taux_marge = st.sidebar.slider(
     "Taux de marge (%)",
@@ -72,10 +70,10 @@ seg_table = df_rfm.groupby(['Segment', 'Priorite'], as_index=False).agg(
 seg_table['Marge'] = seg_table['CA'] * taux_marge
 seg_table = seg_table.sort_values('Priorite')
 
-# On prépare le tableau à afficher
+# Table affichée
 display_df = seg_table[['Segment', 'Volume_clients', 'CA', 'Marge', 'Panier_moyen', 'Priorite']].copy()
 
-# --- Ligne vide ---
+# Ligne vide
 blank_row = pd.DataFrame({
     'Segment': [''],
     'Volume_clients': [''],
@@ -85,55 +83,38 @@ blank_row = pd.DataFrame({
     'Priorite': ['']
 })
 
-# --- Ligne TOTAL ---
+# Ligne total
 total_row = pd.DataFrame({
     'Segment': ['TOTAL'],
-    'Volume_clients': [df_rfm['Customer ID'].nunique()],      # nb total de clients
-    'CA': [seg_table['CA'].sum()],                            # CA total
-    'Marge': [seg_table['Marge'].sum()],                      # Marge totale
-    'Panier_moyen': [''],                                     # tu peux mettre un global si tu veux
+    'Volume_clients': [df_rfm['Customer ID'].nunique()],
+    'CA': [seg_table['CA'].sum()],
+    'Marge': [seg_table['Marge'].sum()],
+    'Panier_moyen': [''],
     'Priorite': ['']
 })
 
-# On concatène : segments + ligne vide + total
 display_df = pd.concat([display_df, blank_row, total_row], ignore_index=True)
 
-# --- Affichage table RFM agrégée ---
-st.subheader("Table RFM par segment")
-
-# Colonnes numériques à formatter
+# Formatage
 num_cols = ['CA', 'Marge', 'Panier_moyen']
 
 for col in num_cols:
-    # Convertir en numérique (en gardant les NaN pour la ligne vide)
     display_df[col] = pd.to_numeric(display_df[col], errors='coerce')
-
-    # Arrondir à 2 décimales
     display_df[col] = display_df[col].round(2)
+    display_df[col] = display_df[col].map(lambda x: f"{x:,.2f}" if pd.notnull(x) else "")
 
-    # Appliquer le format 3,994,348.18
-    display_df[col] = display_df[col].map(
-        lambda x: f"{x:,.2f}" if pd.notnull(x) else ""
-    )
+# --- Affichage ---
+st.subheader("Table RFM par segment")
+st.dataframe(display_df, use_container_width=True)
 
-
-st.dataframe(
-    display_df,
-    use_container_width=True
-)
-
-
-# --- Bloc Scénarios / Simulation ---
+# --- Bloc scénario ---
 st.markdown("---")
 st.subheader("Scénarios CRM - Simulation d'activation")
 
 col_seg, col_p, col_u = st.columns(3)
 
 with col_seg:
-    segment_cible = st.selectbox(
-        "Segment ciblé",
-        options=seg_table['Segment'].unique()
-    )
+    segment_cible = st.selectbox("Segment ciblé", options=seg_table['Segment'].unique())
 
 with col_p:
     part_clients = st.slider(
@@ -153,8 +134,7 @@ with col_u:
         step=5
     )
 
-# --- Calcul scénario ---
-# On récupère la ligne du segment ciblé
+# --- Calcul ---
 seg_row = seg_table[seg_table['Segment'] == segment_cible].iloc[0]
 
 ca_base = seg_row['CA']
@@ -170,58 +150,64 @@ marge_incrementale = ca_incremental * taux_marge
 ca_nouveau = ca_base + ca_incremental
 marge_nouvelle = marge_base + marge_incrementale
 
+# ==============================
+#   NOUVEAUX GRAPHIQUES ICI
+# ==============================
 
-# --- Camembert CA base vs CA additionnel ---
-st.subheader("Répartition du CA (base vs additionnel)")
+st.subheader("Impact du scénario sur le CA du segment")
 
-labels = ["CA base", "CA additionnel simulé"]
-values = [ca_base, ca_incremental]
-
-# Taille du graphique réduite
-fig, ax = plt.subplots(figsize=(3, 4))  # <-- DIMENSION ICI
-
-ax.pie(
-    values,
-    labels=labels,
-    autopct='%1.1f%%',
-    startangle=90
-)
-ax.axis('equal')
-
-st.pyplot(fig)
+col_g1, col_g2 = st.columns(2)
 
 
+# --- Décomposition base vs CA additionnel ---
+st.subheader("Répartition du CA : base + CA additionnel simulé")
+
+# On centre le graphique en utilisant les colonnes Streamlit
+center_col = st.columns([1, 2, 1])[1]   # colonne centrale
+
+with center_col:
+    fig2, ax2 = plt.subplots(figsize=(4, 4))
+
+    # Barre empilée
+    ax2.bar(["Scénario"], [ca_base], label="CA base", color="#4e79a7")
+    ax2.bar(["Scénario"], [ca_incremental], bottom=[ca_base], label="CA additionnel", color="#f28e2b")
+
+    ax2.set_ylabel("CA")
+    ax2.set_ylim(0, (ca_base + ca_incremental) * 1.25)
+    ax2.legend()
+
+    total = ca_base + ca_incremental
+    ax2.text(
+        0,
+        total,
+        f"{total:,.0f}",
+        ha="center",
+        va="bottom",
+        fontsize=10,
+        fontweight="bold"
+    )
+
+    st.pyplot(fig2)
+
+
+# --- Résultats ---
 st.caption(
-    "Logique : CA_additionnel = CA_segment × part_clients_activés × uplift_CA ; "
-    "Marge_additionnelle = CA_additionnel × taux de marge."
+    "Logique : CA additionnel = CA segment × part de clients activés × uplift CA ; "
+    "Marge additionnelle = CA additionnel × taux de marge."
 )
+
 st.markdown(f"### Résultats pour le segment **{segment_cible}**")
 
 c1, c2, c3 = st.columns(3)
 with c1:
-    st.metric(
-        "CA segment (base)",
-        f"{ca_base:,.0f}"
-    )
+    st.metric("CA segment (base)", f"{ca_base:,.0f}")
 with c2:
-    st.metric(
-        "CA additionnel simulé",
-        f"{ca_incremental:,.0f}"
-    )
+    st.metric("CA additionnel simulé", f"{ca_incremental:,.0f}")
 with c3:
-    st.metric(
-        "CA nouveau (base + scénar.)",
-        f"{ca_nouveau:,.0f}"
-    )
+    st.metric("CA nouveau (base + scénar.)", f"{ca_nouveau:,.0f}")
 
 d1, d2 = st.columns(2)
 with d1:
-    st.metric(
-        "Marge segment (base)",
-        f"{marge_base:,.0f}"
-    )
+    st.metric("Marge segment (base)", f"{marge_base:,.0f}")
 with d2:
-    st.metric(
-        "Marge additionnelle simulée",
-        f"{marge_incrementale:,.0f}"
-    )
+    st.metric("Marge additionnelle simulée", f"{marge_incrementale:,.0f}")
