@@ -23,3 +23,4 @@ fastparquet==2023.8.0
 python-dateutil==2.8.2
 pytz==2023.3.post1
 typing-extensions==4.9.0
+kaleido>=0.2.1
