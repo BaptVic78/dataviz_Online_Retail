@@ -67,8 +67,8 @@ def show_scenarios():
 
     # Calcul des métriques de base
     try:
-        total_revenue = df["Total"].sum()
-        avg_order_value = df["Total"].mean()
+        total_revenue = df["TotalPrice"].sum()
+        avg_order_value = df["TotalPrice"].mean()
     except:
         st.error("Impossible de calculer les métriques financières. Vérifiez les colonnes 'Total' ou 'UnitPrice' et 'Quantity'.")
         return
