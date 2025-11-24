@@ -160,34 +160,44 @@ col_g1, col_g2 = st.columns(2)
 
 
 # --- Décomposition base vs CA additionnel ---
-st.subheader("Répartition du CA : base + CA additionnel simulé")
+st.subheader("Répartition du CA : base + CA additionnel simulé (en k€)")
 
 # On centre le graphique en utilisant les colonnes Streamlit
 center_col = st.columns([1, 2, 1])[1]   # colonne centrale
 
 with center_col:
+    # On passe tout en k€ pour l'affichage du graphe
+    ca_base_k = ca_base / 1_000
+    ca_incremental_k = ca_incremental / 1_000
+    total_k = ca_base_k + ca_incremental_k
+
     fig2, ax2 = plt.subplots(figsize=(4, 4))
 
-    # Barre empilée
-    ax2.bar(["Scénario"], [ca_base], label="CA base", color="#4e79a7")
-    ax2.bar(["Scénario"], [ca_incremental], bottom=[ca_base], label="CA additionnel", color="#f28e2b")
+    # Barre empilée en k€
+    ax2.bar(["Scénario"], [ca_base_k], label="CA base", color="#4e79a7")
+    ax2.bar(["Scénario"], [ca_incremental_k], bottom=[ca_base_k],
+            label="CA additionnel", color="#f28e2b")
 
-    ax2.set_ylabel("CA")
-    ax2.set_ylim(0, (ca_base + ca_incremental) * 1.25)
+    ax2.set_ylabel("CA (k€)")
+    ax2.set_ylim(0, total_k * 1.25)
     ax2.legend()
 
-    total = ca_base + ca_incremental
+    # Label total en k€
     ax2.text(
         0,
-        total,
-        f"{total:,.0f}",
+        total_k,
+        f"{total_k:,.0f} k€",
         ha="center",
         va="bottom",
         fontsize=10,
         fontweight="bold"
     )
 
+    # Désactiver la notation scientifique
+    ax2.ticklabel_format(style='plain', axis='y')
+
     st.pyplot(fig2)
+
 
 
 # --- Résultats ---
