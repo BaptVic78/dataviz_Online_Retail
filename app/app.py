@@ -107,7 +107,7 @@ def tooltip(label, text):
     """
 
 # ------------------------------------------------
-#      CLV SAFE (corrige l'erreur TypeError)
+#      CLV SAFE
 # ------------------------------------------------
 def compute_clv_safe(aov, freq, lifespan):
     try:
@@ -116,24 +116,20 @@ def compute_clv_safe(aov, freq, lifespan):
         return aov * freq * lifespan
 
 # ------------------------------------------------
-#               EXPORT CSV
+# EXPORT CSV
 # ------------------------------------------------
 def export_filtered_csv(df_filtered):
     csv_buffer = io.StringIO()
     df_filtered.to_csv(csv_buffer, index=False, sep=";")
-    csv_data = csv_buffer.getvalue()
-
-    fname = f"online_retail_export_{datetime.now().strftime('%Y-%m-%d')}.csv"
-
     st.download_button(
         label="📥 Export CSV (filtré)",
-        data=csv_data,
-        file_name=fname,
+        data=csv_buffer.getvalue(),
+        file_name=f"online_retail_export_{datetime.now().strftime('%Y-%m-%d')}.csv",
         mime="text/csv"
     )
 
 # ------------------------------------------------
-#               EXPORT PNG (fallback sans Kaleido)
+# EXPORT PNG
 # ------------------------------------------------
 def export_png_plot(fig, title="graphique"):
     try:
@@ -146,10 +142,9 @@ def export_png_plot(fig, title="graphique"):
             mime="image/png"
         )
     except Exception:
-        html_bytes = fig.to_html(include_plotlyjs="cdn").encode()
         st.download_button(
-            label="💾 Export HTML du graphique (PNG indisponible)",
-            data=html_bytes,
+            label="💾 Export HTML (PNG indisponible)",
+            data=fig.to_html().encode(),
             file_name=f"{title}.html",
             mime="text/html"
         )
@@ -162,10 +157,9 @@ def show_dashboard():
     st.title("📊 Tableau de Bord Marketing")
 
     # ---------------------------
-    # 1. Load data
+    # Load data
     # ---------------------------
     df = load_data()
-
     if df.empty:
         st.error("Impossible de charger les données.")
         return
@@ -175,31 +169,22 @@ def show_dashboard():
     df["Quarter"] = df["InvoiceDate"].dt.to_period("Q").astype(str)
 
     # ---------------------------
-    # 2. Load RFM (TON FICHIER)
+    # Load RFM
     # ---------------------------
     df_rfm = pd.read_csv("data/processed/df_rfm_resultat.csv")
 
-    # ---------------------------
-    # Segmentation RFM via RFM_POURCENTAGE (TA DEMANDE)
-    # ---------------------------
     def label_rfm(percent):
-        if percent >= 400:
-            return "Champions"
-        elif percent >= 300:
-            return "Fidèles"
-        elif percent >= 200:
-            return "Potentiels"
-        elif percent >= 120:
-            return "À Risque"
-        elif percent >= 100:
-            return "Perdus"
-        else:
-            return "Perdus"
+        if percent >= 400: return "Champions"
+        elif percent >= 300: return "Fidèles"
+        elif percent >= 200: return "Potentiels"
+        elif percent >= 120: return "À Risque"
+        elif percent >= 100: return "Perdus"
+        else: return "Perdus"
 
     df_rfm["RFM_Label"] = df_rfm["RFM_Pourcentage"].apply(label_rfm)
 
     # ---------------------------
-    # 3. Filtres
+    # Filtres
     # ---------------------------
     with st.sidebar:
         st.header("🎛 Filtres")
@@ -208,25 +193,13 @@ def show_dashboard():
         max_date = df["InvoiceDate"].max().date()
 
         start_date, end_date = st.date_input("Période", value=(min_date, max_date))
-
         time_unit = st.radio("Unité", ["Mois", "Trimestre"])
-
-        country_choice = st.selectbox(
-            "Pays",
-            ["Tous"] + sorted(df["Country"].dropna().unique())
-        )
-
-        threshold = st.slider(
-            "Seuil minimum (€)",
-            0.0,
-            float(df["TotalPrice"].quantile(0.95)),
-            0.0
-        )
-
+        country_choice = st.selectbox("Pays", ["Tous"] + sorted(df["Country"].dropna().unique()))
+        threshold = st.slider("Seuil minimum (€)", 0.0, float(df["TotalPrice"].quantile(0.95)), 0.0)
         returns_mode = st.radio("Retours", ["Inclure", "Exclure", "Neutraliser"])
 
     # ---------------------------
-    # 4. Application des filtres
+    # Application des filtres
     # ---------------------------
     df_f = df[(df["InvoiceDate"].dt.date >= start_date) &
               (df["InvoiceDate"].dt.date <= end_date)].copy()
@@ -244,13 +217,13 @@ def show_dashboard():
         df_f.loc[df_f["Quantity"] < 0, "TotalPrice"] = 0
 
     # ---------------------------
-    # 5. KPIs PRINCIPAUX
+    # KPIs PRINCIPAUX
     # ---------------------------
     st.markdown("## 📌 KPIs Principaux")
 
     total_revenue = df_f["TotalPrice"].sum()
     n_customers = df_f["CustomerID"].nunique()
-    avg_order_value = total_revenue / max(len(df_f),1)
+    avg_order_value = total_revenue / max(len(df_f), 1)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.markdown(_kpi("Clients actifs", f"{n_customers:,}"), unsafe_allow_html=True)
@@ -261,7 +234,7 @@ def show_dashboard():
     st.markdown("---")
 
     # ---------------------------
-    # 6. KPIs OVERVIEW (ℹ️)
+    # KPIs OVERVIEW
     # ---------------------------
     st.markdown("## 🌟 KPIs – Overview")
 
@@ -269,22 +242,17 @@ def show_dashboard():
     df_f["CohortAge"] = ((df_f["InvoiceDate"] - df_f["FirstPurchase"]).dt.days // 30)
 
     ca_age_cohorte = df_f.groupby("CohortAge")["TotalPrice"].sum().mean()
-
     avg_freq = compute_avg_purchase_frequency(df_f)
     avg_lifespan = compute_customer_lifespan(df_f)
-
     clv_baseline = compute_clv_safe(avg_order_value, avg_freq, avg_lifespan)
-
     north_star = df_f.groupby("Month")["InvoiceNo"].nunique().mean()
 
-    # Infobulles (définitions + exemples)
     t_ca = "CA moyen généré en fonction de l’ancienneté."
     t_seg = "Nombre de segments RFM basé sur RFM_Pourcentage."
     t_clv = f"CLV = {avg_order_value:,.0f}€ × {avg_freq:.2f} × {avg_lifespan:.1f}."
     t_ns = "Nombre moyen de commandes mensuelles uniques."
 
     c1, c2, c3, c4, c5 = st.columns(5)
-
     c1.markdown(_kpi("Clients actifs", f"{n_customers:,}"), unsafe_allow_html=True)
     c2.markdown(_kpi(tooltip("CA / cohorte", t_ca), f"{ca_age_cohorte:,.0f} €"), unsafe_allow_html=True)
     c3.markdown(_kpi(tooltip("Segments RFM", t_seg), df_rfm["RFM_Label"].nunique()), unsafe_allow_html=True)
@@ -294,7 +262,7 @@ def show_dashboard():
     st.markdown("---")
 
     # ---------------------------
-    # 7. TENDANCE CA
+    # TENDANCE CA
     # ---------------------------
     st.subheader("📈 Tendances du CA")
 
@@ -308,26 +276,25 @@ def show_dashboard():
     export_png_plot(fig, title="tendance_CA")
 
     # ---------------------------
-    # 8. SEGMENTS RFM (Basé sur RFM_POURCENTAGE)
+    # SEGMENTS RFM
     # ---------------------------
     st.subheader("🧩 Segments RFM")
 
-
-rfm_display = df_rfm[
-    [
-        "Customer ID",
-        "Monetaire_Total_Depense",
-        "Frequence_Nb_Commandes",
-        "R_Score", "F_Score", "M_Score",
-        "RFM_Somme", "RFM_Pourcentage",
-        "RFM_Label"
+    rfm_display = df_rfm[
+        [
+            "Customer ID",
+            "Monetaire_Total_Depense",
+            "Frequence_Nb_Commandes",
+            "R_Score", "F_Score", "M_Score",
+            "RFM_Somme", "RFM_Pourcentage",
+            "RFM_Label"
+        ]
     ]
-]
 
     st.dataframe(rfm_display, use_container_width=True)
 
     # ---------------------------
-    # 9. TOP PRODUITS
+    # TOP PRODUITS
     # ---------------------------
     st.subheader("🏆 Top Produits")
 
@@ -342,14 +309,14 @@ rfm_display = df_rfm[
     c2.dataframe(top_returns)
 
     # ---------------------------
-    # 10. EXPORT CSV
+    # EXPORT CSV
     # ---------------------------
     st.subheader("📤 Export des données filtrées")
     export_filtered_csv(df_f)
 
 
 # ------------------------------------------------
-#               RUN APP
+# RUN APP
 # ------------------------------------------------
 if __name__ == "__main__":
     show_dashboard()
