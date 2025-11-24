@@ -3,223 +3,148 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from datetime import datetime
-from utils import load_data, compute_avg_purchase_frequency, compute_customer_lifespan, calculate_clv
 
-# Configuration de la page
-st.set_page_config(
-    page_title="Tableau de Bord Marketing - Scénarios",
-    page_icon="📊",
-    layout="wide"
-)
+# ======================
+# 1. Charger le fichier CSV
+# ======================
+@st.cache_data
+def load_rfm():
+    df = pd.read_csv("data/processed/df_rfm_resultat.csv")
+    df["Date_Premier_Achat"] = pd.to_datetime(df["Date_Premier_Achat"])
+    return df
 
+
+# ======================
+# 2. Fonction de labeling RFM
+# ======================
+def label_rfm(percent):
+    if percent >= 400: return "Champions"
+    elif percent >= 300: return "Fidèles"
+    elif percent >= 200: return "Potentiels"
+    elif percent >= 120: return "À Risque"
+    elif percent >= 100: return "Perdus"
+    else: return "Perdus"
+
+
+# ======================
+# 3. CLV empirique
+# ======================
+def calculate_clv_empirique(aov, freq, lifespan):
+    return aov * freq * lifespan
+
+
+# ======================
+# 4. Durée de vie client (en années)
+# ======================
+def compute_lifespan(df):
+    # ancienneté des clients : aujourd’hui - première date
+    lifespan_days = (pd.Timestamp.today() - df["Date_Premier_Achat"]).dt.days
+    return (lifespan_days / 365).mean()
+
+
+# ======================
+# PAGE STREAMLIT
+# ======================
 def show_scenarios():
-    st.title("📈 Simulation d'Impact Marketing")
-    st.markdown("Simulez l'impact de différentes stratégies marketing sur la CLV.")
 
-    # Charger les données
-    df = load_data()
-    
-    if df.empty:
-        st.error("Impossible de charger les données. Vérifiez le fichier de données.")
-        return
+    st.title("📈 Simulation d'Impact Marketing (CLV)")
+    st.markdown("Analyse l'effet d'une remise, du taux de marge ou de la rétention sur la CLV.")
 
-    
+    df = load_rfm()
+    df["Segment_RFM"] = df["RFM_Pourcentage"].apply(label_rfm)
+
+    # ============================
+    # 🧮 MÉTRIQUES DE BASE
+    # ============================
+    aov = df["Monetaire_Total_Depense"].mean()
+    freq = df["Frequence_Nb_Commandes"].mean()
+    lifespan = compute_lifespan(df)
+
+    clv_baseline = calculate_clv_empirique(aov, freq, lifespan)
+
+    # ============================
+    # 🎛 SIDEBAR
+    # ============================
     with st.sidebar:
-        st.header("Paramètres de Simulation")
 
-        # Sélecteur de cohorte
-        cohort_options = ["Toutes les cohortes"] + sorted(df["Cohort"].unique())
-        cohort_select = st.selectbox("Cohorte cible", cohort_options)
+        st.header("Paramètres du scénario")
 
-        # Filtrage par cohorte
-        if cohort_select != "Toutes les cohortes":
-            df = df[df["Cohort"] == cohort_select]
+        marge = st.slider("Marge brute (%)", 0.0, 100.0, 30.0)
+        remise = st.slider("Remise (%)", 0.0, 80.0, 10.0)
+        retention = st.slider("Taux de rétention (%)", 0.0, 100.0, 70.0)
+        discount = st.slider("Taux d'actualisation (%)", 0.0, 30.0, 10.0)
 
-        st.subheader("Paramètres financiers")
-        marge = st.slider("Marge brute moyenne (%)", 0.0, 100.0, 30.0, 0.1)
-        remise = st.slider("Remise moyenne (%)", 0.0, 100.0, 10.0, 0.1)
-
-        remise_application = st.radio(
-            "Appliquer la remise à :", 
-            ["Tous les clients", "Segments spécifiques"]
+        st.subheader("Segments RFM ciblés :")
+        segments_selected = st.multiselect(
+            "Choisir segments",
+            df["Segment_RFM"].unique(),
+            default=df["Segment_RFM"].unique().tolist()
         )
-        
-        if remise_application == "Segments spécifiques":
-            segments = st.multiselect(
-                "Choisir segments RFM :",
-                df["RFM_Segment"].unique(),
-                default=df["RFM_Segment"].unique()[:1] if len(df["RFM_Segment"].unique()) > 0 else []
-            )
-            if segments:
-                df = df[df["RFM_Segment"].isin(segments)]
 
-        st.subheader("Paramètres de rétention")
-        retention_rate = st.slider("Taux de rétention (%)", 0.0, 100.0, 70.0, 0.1)
-        
-        st.subheader("Paramètres CLV")
-        discount_rate = st.slider("Taux d'actualisation (%)", 0.0, 30.0, 10.0, 0.1)
-        
-        include_returns = st.checkbox("Inclure les retours", value=True)
+        df_filtered = df[df["Segment_RFM"].isin(segments_selected)]
 
-    # Filtrage des retours si nécessaire    
-    if not include_returns and 'Quantity' in df.columns:
-        df = df[df["Quantity"] > 0]
-
-    # Calcul des métriques de base
-    try:
-        total_revenue = df["TotalPrice"].sum()
-        avg_order_value = df["TotalPrice"].mean()
-    except:
-        st.error("Impossible de calculer les métriques financières. Vérifiez les colonnes 'Total' ou 'UnitPrice' et 'Quantity'.")
+    # recalcul si filtrage
+    if len(df_filtered) == 0:
+        st.error("Aucun client dans cette sélection.")
         return
 
-    # Calcul des métriques avancées
-    avg_purchase_freq = compute_avg_purchase_frequency(df)
-    customer_lifespan = compute_customer_lifespan(df)
+    aov_new = df_filtered["Monetaire_Total_Depense"].mean() * (1 - remise / 100)
+    freq_new = df_filtered["Frequence_Nb_Commandes"].mean()
+    lifespan_new = lifespan * (retention / 100)
 
-    # Conversion des pourcentages
-    r_input = retention_rate / 100
-    d_input = discount_rate / 100
+    clv_scenario = calculate_clv_empirique(aov_new, freq_new, lifespan_new)
 
-    # Calcul de la CLV de base
-    clv_baseline = calculate_clv(
-        df, r_input, d_input, avg_order_value, 
-        avg_purchase_freq, customer_lifespan, marge
-    )
-
-    # Calcul du scénario
-    new_aov = avg_order_value * (1 - remise / 100)
-    new_r = min(0.99, r_input + 0.05)  # On évite la division par zéro
-
-    clv_scenario = calculate_clv(
-        df, new_r, d_input, new_aov, 
-        avg_purchase_freq, customer_lifespan, marge
-    )
-
-    # Affichage des KPI
+    # ============================
+    # 🎯 KPI
+    # ============================
     col1, col2, col3 = st.columns(3)
 
-    col1.metric(
-        "CLV Actuelle", 
-        f"{clv_baseline:,.2f} €",
-        help=f"CLV calculée avec une marge de {marge}%"
-    )
+    col1.metric("CLV Baseline", f"{clv_baseline:,.2f} €")
+    col2.metric("CLV Scénario", f"{clv_scenario:,.2f} €",
+                delta=f"{clv_scenario - clv_baseline:,.2f} €")
 
-    col2.metric(
-        "CLV Scénario",
-        f"{clv_scenario:,.2f} €",
-        delta=f"{(clv_scenario - clv_baseline):,.2f} €",
-        delta_color="inverse" if clv_scenario < clv_baseline else "normal"
-    )
+    impact_pct = ((clv_scenario - clv_baseline) / clv_baseline) * 100
+    col3.metric("Impact (%)", f"{impact_pct:+.2f}%")
 
-    impact_pct = ((clv_scenario - clv_baseline) / clv_baseline * 100) if clv_baseline != 0 else 0
-    col3.metric(
-        "Impact sur la CLV", 
-        f"{impact_pct:+.2f}%",
-        help="Variation en pourcentage de la CLV"
-    )
+    # ============================
+    # 📊 GRAPHIQUE
+    # ============================
+    st.subheader("📈 Sensibilité de la CLV au taux de rétention")
 
-    # Graphique de sensibilité
-    st.subheader("Sensibilité de la CLV au Taux de Rétention")
-    
-    retention_range = np.linspace(0.1, 0.99, 10)  # Éviter la division par zéro
-    clv_values = [
-        calculate_clv(
-            df, r, d_input, new_aov, 
-            avg_purchase_freq, customer_lifespan, marge
-        )
+    retention_range = np.linspace(0.1, 0.99, 12)
+    clv_sensitivity = [
+        calculate_clv_empirique(aov_new, freq_new, lifespan * r)
         for r in retention_range
     ]
 
     fig = px.line(
         x=retention_range * 100,
-        y=clv_values,
-        labels={"x": "Taux de rétention (%)", "y": "CLV (€)"},
-        markers=True,
-        title="Impact du taux de rétention sur la CLV"
+        y=clv_sensitivity,
+        labels={"x": "Rétention (%)", "y": "CLV (€)"},
+        markers=True
     )
-    
+
     fig.add_hline(
         y=clv_baseline,
         line_dash="dash",
         line_color="red",
-        annotation_text=f"CLV actuelle : {clv_baseline:,.2f} €",
+        annotation_text=f"CLV baseline : {clv_baseline:,.2f} €"
     )
-    
+
     st.plotly_chart(fig, use_container_width=True)
 
-    # Récapitulatif
-    st.subheader("Récapitulatif des Paramètres")
+    # ============================
+    # 📘 RÉCAP
+    # ============================
+    st.subheader("🧾 Récapitulatif")
 
-    summary = pd.DataFrame({
-        "Paramètre": [
-            "Cohorte sélectionnée",
-            "Marge brute moyenne",
-            "Remise appliquée",
-            "Taux de rétention",
-            "Taux d'actualisation",
-            "Retours inclus",
-            "Application de remise",
-            "Fréquence d'achat moyenne (par mois)",
-            "Durée de vie moyenne (années)"
-        ],
-        "Valeur": [
-            cohort_select,
-            f"{marge}%",
-            f"{remise}%",
-            f"{retention_rate}%",
-            f"{discount_rate}%",
-            "Oui" if include_returns else "Non",
-            remise_application,
-            f"{avg_purchase_freq:.2f}",
-            f"{customer_lifespan:.2f}"
-        ]
+    recap = pd.DataFrame({
+        "Paramètre": ["Marge", "Remise", "Rétention", "Taux d'actualisation"],
+        "Valeur": [f"{marge}%", f"{remise}%", f"{retention}%", f"{discount}%"]
     })
 
-    st.table(summary)
+    st.table(recap)
 
-    # Bouton d'export
-    if st.button("Exporter les Résultats"):
-        export_data = {
-            "Métrique": ["CLV Actuelle", "CLV Scénario", "Impact (€)", "Impact (%)"],
-            "Valeur": [
-                f"{clv_baseline:,.2f} €",
-                f"{clv_scenario:,.2f} €",
-                f"{(clv_scenario - clv_baseline):,.2f} €",
-                f"{impact_pct:+.2f}%"
-            ]
-        }
-        
-        df_export = pd.DataFrame(export_data)
-        csv = df_export.to_csv(index=False).encode('utf-8')
-        
-        st.download_button(
-            label="Télécharger les résultats en CSV",
-            data=csv,
-            file_name=f"simulation_clv_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime='text/csv',
-        )
-    
-        # --- LA NAVIGATION ---
-    st.subheader("Où voulez-vous aller ?")
 
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown("### 📉 Diagnostic")
-        st.write("Analysez la rétention et le comportement par cohorte.")
-        # C'est ici que ça se passe :
-        st.page_link("pages/cohortes.py", label="Voir les Cohortes", icon="📊", use_container_width=True)
-
-    with c2:
-        st.markdown("### 🎯 Segmentation")
-        st.write("Priorisez vos actions grâce à l'analyse RFM.")
-        st.page_link("pages/segments.py", label="Voir les Segments RFM", icon="👥", use_container_width=True)
-
-    with c3:
-        st.markdown("### 🔮 Prédictions")
-        st.write("Simulez vos scénarios de croissance (CLV).")
-        st.page_link("pages/scenarios.py", label="Voir le Simulateur", icon="🚀", use_container_width=True)
-
-if __name__ == "__main__":
-    show_scenarios()
+# afficher la page
+show_scenarios()
