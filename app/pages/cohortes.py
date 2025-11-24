@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import compute_cohort_matrix, load_data, plot_retention_heatmap, densite
+from utils import compute_cohort_matrix, load_data, plot_retention_heatmap, densite, plot_retention_curves, plot_average_retention, display_retention_kpis
 
 
 def main():
@@ -14,6 +14,9 @@ def main():
     cohort_matrix = compute_cohort_matrix(df)
     plot_retention_heatmap(cohort_matrix)
     densite(df)
+    plot_retention_curves(cohort_matrix)
+    plot_average_retention(cohort_matrix)
+    display_retention_kpis(cohort_matrix)
 
 if __name__ == "__main__":
     main()

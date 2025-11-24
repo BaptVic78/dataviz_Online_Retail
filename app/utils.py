@@ -184,3 +184,67 @@ def densite(df):
                 Ces clients constituent la base saine et récurrente du chiffre d'affaires.
                 """
             )
+
+def plot_retention_curves(cohorts_pivot):
+    st.subheader("📉 Courbes de Rétention par Cohorte")
+    
+    # On transpose pour avoir les mois (0, 1, 2...) en axe X
+    # et les cohortes en différentes lignes
+    df_plot = cohorts_pivot.T
+    
+    fig = px.line(
+        df_plot, 
+        markers=True,
+        title="Comparaison des trajectoires de rétention",
+        labels={"index": "Mois après acquisition", "value": "Taux de Rétention"}
+    )
+    
+    fig.update_layout(yaxis_tickformat=".0%") # Axe Y en %
+    st.plotly_chart(fig, use_container_width=True)
+
+def plot_average_retention(cohorts_pivot):
+    st.subheader("⚖️ Rétention Moyenne Globale")
+    
+    # On calcule la moyenne de chaque colonne (M0, M1, M2...)
+    avg_retention = cohorts_pivot.iloc[:, 1:].mean(axis=0)
+    
+    fig = px.area(
+        x=avg_retention.index, 
+        y=avg_retention.values,
+        title="Courbe de vie moyenne d'un client",
+        labels={"x": "Mois d'ancienneté", "y": "Taux moyen de présence"},
+        markers=True
+    )
+    
+    fig.update_layout(yaxis_tickformat=".0%")
+    # Ajout d'une ligne seuil à 20% 
+    fig.add_hline(y=0.20, line_dash="dot", annotation_text="Seuil de fidélité (20%)")
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+def display_retention_kpis(cohorts_pivot):
+    st.subheader("📌 Indicateurs Clés de Rétention")
+    
+    # Moyenne à M+1 (Index 1)
+    retention_m1 = cohorts_pivot[1].mean()
+    
+    # Moyenne à M+12 (Index 12) - on gère le cas où M12 n'existe pas encore
+    if 12 in cohorts_pivot.columns:
+        retention_m12 = cohorts_pivot[12].mean()
+    else:
+        retention_m12 = 0
+        
+    col1, col2, col3 = st.columns(3)
+    
+    col1.metric(
+        label="Rétention Moyenne à M+1", 
+        value=f"{retention_m1:.1%}", 
+        delta="- Choc d'Onboarding", 
+        delta_color="inverse"
+    )
+    
+    col2.metric(
+        label="Rétention Moyenne à M+12", 
+        value=f"{retention_m12:.1%}", 
+        help="Clients encore actifs après 1 an"
+    )

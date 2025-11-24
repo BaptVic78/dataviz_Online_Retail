@@ -241,7 +241,9 @@ def show_dashboard():
     df_f["FirstPurchase"] = df_f.groupby("CustomerID")["InvoiceDate"].transform("min")
     df_f["CohortAge"] = ((df_f["InvoiceDate"] - df_f["FirstPurchase"]).dt.days // 30)
 
-    ca_age_cohorte = df_f.groupby("CohortAge")["TotalPrice"].sum().mean()
+    rev_acquisition = df[df['CohortIndex'] == 0]['TotalPrice'].sum()
+    rev_retention = df[df['CohortIndex'] > 0]['TotalPrice'].sum()
+    share_retention = (rev_retention / total_revenue) * 100 if total_revenue > 0 else 0
     avg_freq = compute_avg_purchase_frequency(df_f)
     avg_lifespan = compute_customer_lifespan(df_f)
     clv_baseline = compute_clv_safe(avg_order_value, avg_freq, avg_lifespan)
@@ -252,12 +254,16 @@ def show_dashboard():
     t_clv = f"CLV = {avg_order_value:,.0f}€ × {avg_freq:.2f} × {avg_lifespan:.1f}."
     t_ns = "Nombre moyen de commandes mensuelles uniques."
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.markdown(_kpi("Clients actifs", f"{n_customers:,}"), unsafe_allow_html=True)
-    c2.markdown(_kpi(tooltip("CA / cohorte", t_ca), f"{ca_age_cohorte:,.0f} €"), unsafe_allow_html=True)
-    c3.markdown(_kpi(tooltip("Segments RFM", t_seg), df_rfm["RFM_Label"].nunique()), unsafe_allow_html=True)
-    c4.markdown(_kpi(tooltip("CLV baseline", t_clv), f"{clv_baseline:,.0f} €"), unsafe_allow_html=True)
-    c5.markdown(_kpi(tooltip("North Star", t_ns), f"{north_star:,.0f}"), unsafe_allow_html=True)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    help_active = "Nombre de clients uniques ayant passé au moins une commande sur la période sélectionnée."
+    c1.markdown(_kpi(tooltip("Clients actifs", help_active), f"{n_customers:,}"), unsafe_allow_html=True)
+    help_acq = "Revenu généré par les nouveaux clients (Mois 0) sur la période."
+    c2.markdown(_kpi(tooltip("CA Acquisition", help_acq), f"{rev_acquisition:,.0f} €"), unsafe_allow_html=True)
+    help_ret = f"Revenu des clients historiques (Mois > 0). Représente {share_retention:.1f}% du CA total."
+    c3.markdown(_kpi(tooltip("CA Rétention", help_ret), f"{rev_retention:,.0f} €"), unsafe_allow_html=True)
+    c4.markdown(_kpi(tooltip("Segments RFM", t_seg), df_rfm["RFM_Label"].nunique()), unsafe_allow_html=True)
+    c5.markdown(_kpi(tooltip("CLV baseline", t_clv), f"{clv_baseline:,.0f} €"), unsafe_allow_html=True)
+    c6.markdown(_kpi(tooltip("North Star", t_ns), f"{north_star:,.0f}"), unsafe_allow_html=True)
 
     st.markdown("---")
 
