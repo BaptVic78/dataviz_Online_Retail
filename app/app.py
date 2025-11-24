@@ -101,7 +101,7 @@ def show_dashboard():
         else:
             return "Perdus"
 
-    df_rfm["RFM_Label"] = df_rfm["RFM_Score"].apply(label_rfm)
+    df_rfm["RFM_Label"] = df_rfm["RFM_Pourcentage"].apply(label_rfm)
 
     # ---------------------------
     # 4. Filtres
@@ -217,7 +217,7 @@ def show_dashboard():
 
     rfm_display = df_rfm[
         ["Customer ID", "Monetaire_Total_Depense",
-         "Frequence_Nb_Commandes", "RFM_Score", "RFM_Label"]
+         "Frequence_Nb_Commandes", "RFM_Pourcentage", "RFM_Label"]
     ]
 
     st.dataframe(rfm_display, use_container_width=True)
