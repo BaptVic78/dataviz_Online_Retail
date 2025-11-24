@@ -147,15 +147,14 @@ def show_dashboard():
         df_f = df_f[df_f["Country"] == country_choice]
 
     if "TotalPrice" in df_f.columns:
-        df_f = df_f[df_f["TotalPrice"] >= order_threshold]
-
+        df_f = df_f[(df_f["TotalPrice"] >= order_threshold) | (df_f["Quantity"] < 0 )]
+        
     # GESTION RETOURS
-    if "Quantity" in df_f.columns:
-        if returns_mode == "Exclure":
-            df_f = df_f[df_f["Quantity"] > 0]
+    if returns_mode == "Exclure":
+        df_f = df_f[df_f["Quantity"] > 0]
 
-        elif returns_mode == "Neutraliser":
-            df_f.loc[df_f["Quantity"] < 0, "TotalPrice"] = 0
+    elif returns_mode == "Neutraliser":
+        df_f.loc[df_f["Quantity"] < 0, "TotalPrice"] = 0
 
     # BADGE
     if returns_mode != "Inclure":
