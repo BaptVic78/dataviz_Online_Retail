@@ -312,14 +312,17 @@ def show_dashboard():
     # ---------------------------
     st.subheader("🧩 Segments RFM")
 
-    rfm_display = df_rfm[
-        ["Customer ID",
-         "Monetaire_Total_Depense",
-         "Frequence_Nb_Commandes",
-         "R_Score", "F_Score", "M_Score",
-         "RFM_Somme", "RFM_Pourcentage",
-         "RFM_Label"]
+
+rfm_display = df_rfm[
+    [
+        "Customer ID",
+        "Monetaire_Total_Depense",
+        "Frequence_Nb_Commandes",
+        "R_Score", "F_Score", "M_Score",
+        "RFM_Somme", "RFM_Pourcentage",
+        "RFM_Label"
     ]
+]
 
     st.dataframe(rfm_display, use_container_width=True)
 
