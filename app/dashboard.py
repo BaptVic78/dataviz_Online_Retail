@@ -116,8 +116,8 @@ def show_dashboard():
         countries = ["Tous"] + sorted(df["Country"].dropna().unique().tolist())
         country_choice = st.selectbox("Pays", countries)
 
-        if "Total" in df.columns:
-            max_total = float(df["Total"].quantile(0.95))
+        if "TotalPrice" in df.columns:
+            max_total = float(df["TotalPrice"].quantile(0.95))
             order_threshold = st.slider(
                 "Seuil minimum (€)",
                 0.0,
@@ -146,8 +146,8 @@ def show_dashboard():
     if country_choice != "Tous":
         df_f = df_f[df_f["Country"] == country_choice]
 
-    if "Total" in df_f.columns:
-        df_f = df_f[df_f["Total"] >= order_threshold]
+    if "TotalPrice" in df_f.columns:
+        df_f = df_f[df_f["TotalPrice"] >= order_threshold]
 
     # GESTION RETOURS
     if "Quantity" in df_f.columns:
@@ -155,7 +155,7 @@ def show_dashboard():
             df_f = df_f[df_f["Quantity"] > 0]
 
         elif returns_mode == "Neutraliser":
-            df_f.loc[df_f["Quantity"] < 0, "Total"] = 0
+            df_f.loc[df_f["Quantity"] < 0, "TotalPrice"] = 0
 
     # BADGE
     if returns_mode != "Inclure":
@@ -187,7 +187,7 @@ def show_dashboard():
     # 4. KPIs PRINCIPAUX
     # ==========================
 
-    total_revenue = df_f["Total"].sum()
+    total_revenue = df_f["TotalPrice"].sum()
     n_customers = df_f["CustomerID"].nunique()
     n_orders = len(df_f)
     avg_order_value = total_revenue / n_orders if n_orders > 0 else 0
@@ -231,7 +231,7 @@ def show_dashboard():
     time_col = "Month" if time_unit == "Mois" else "Quarter"
 
     rev_time = (
-        df_f.groupby(time_col)["Total"]
+        df_f.groupby(time_col)["TotalPrice"]
         .sum()
         .reset_index()
         .sort_values(time_col)
@@ -240,7 +240,7 @@ def show_dashboard():
     fig_time = px.line(
         rev_time,
         x=time_col,
-        y="Total",
+        y="TotalPrice",
         markers=True,
         title=f"CA par {time_unit}",
     )
@@ -253,7 +253,7 @@ def show_dashboard():
     st.subheader("🌍 Top pays par CA")
 
     rev_country = (
-        df_f.groupby("Country")["Total"]
+        df_f.groupby("Country")["TotalPrice"]
         .sum()
         .sort_values(ascending=False)
         .head(10)
@@ -263,7 +263,7 @@ def show_dashboard():
     fig_country = px.bar(
         rev_country,
         x="Country",
-        y="Total",
+        y="TotalPrice",
         text_auto=True,
         title="Top 10 pays",
     )
@@ -279,7 +279,7 @@ def show_dashboard():
         st.info("Pas encore de segments RFM calculés.")
     else:
         rfm_agg = (
-            df_f.groupby(["RFM_Segment", "CustomerID"])["Total"]
+            df_f.groupby(["RFM_Segment", "CustomerID"])["TotalPrice"]
             .agg(["count", "sum", "mean"])
             .reset_index()
         )
@@ -315,7 +315,7 @@ def show_dashboard():
         df_f.groupby("CustomerID")
         .agg(
             {
-                "Total": "sum",
+                "TotalPrice": "sum",
                 "InvoiceNo": "nunique",
                 "Country": lambda x: x.mode().iloc[0],
                 "RFM_Segment": lambda x: x.mode().iloc[0] if "RFM_Segment" in df_f.columns else "",
@@ -326,7 +326,7 @@ def show_dashboard():
 
     activable.rename(
         columns={
-            "Total": "CA_période",
+            "TotalPrice": "CA_période",
             "InvoiceNo": "Nb_commandes",
             "Country": "Pays principal",
             "RFM_Segment": "Segment RFM",
