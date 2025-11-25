@@ -102,7 +102,7 @@ def plot_retention_heatmap(cohorts_pivot):
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("### Ou investir")
-            st.warning(
+            st.success(
                 """
                 La heatmap montre les cohortes qui restent bleues longtemps (clients fidèles)
                 Il faut garder ces clients car il "répondent"
@@ -111,7 +111,7 @@ def plot_retention_heatmap(cohorts_pivot):
         
         with col2:
             st.markdown("### segments/cohortes qui répondent")
-            st.warning(
+            st.error(
                 """
                 La heatmap montre les cohortes qui deviennent blanches tout de suite
                 Il faut réduire les dépenses sur ces cohortes car ils ne "répondent pas"
