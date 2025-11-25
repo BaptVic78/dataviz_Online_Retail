@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 from datetime import datetime
+from io import BytesIO
 
 @st.cache_data
 def load_data():
@@ -242,3 +243,143 @@ def plot_average_retention(cohorts_pivot):
     
     st.plotly_chart(fig, use_container_width=True)
 
+
+# ============================
+# 📌 CHARGEMENT DES DONNÉES
+# ============================
+def load_rfm(path="data/processed/df_rfm_resultat.csv"):
+    df = pd.read_csv(path)
+    df['Customer ID'] = df['Customer ID'].astype(int)
+    df['Date_Premier_Achat'] = pd.to_datetime(df['Date_Premier_Achat'])
+    return df
+
+
+# ============================
+# 📌 SEGMENTATION RFM
+# ============================
+def assign_segment(score):
+    if score >= 400:
+        return "Champions"
+    elif 300 <= score <= 399:
+        return "Fidèles"
+    elif 200 <= score <= 299:
+        return "Potentiels"
+    elif 120 <= score <= 199:
+        return "À Risque"
+    else:
+        return "Perdus"
+
+
+def add_rfm_segment(df):
+    df['Segment'] = df['RFM_Pourcentage'].apply(assign_segment)
+    priority_mapping = {
+        "Champions": 1,
+        "Fidèles": 2,
+        "Potentiels": 3,
+        "À Risque": 4,
+        "Perdus": 5
+    }
+    df['Priorite'] = df['Segment'].map(priority_mapping)
+    return df
+
+
+# ============================
+# 📌 AGRÉGATS PAR SEGMENT
+# ============================
+def compute_segment_table(df, taux_marge):
+    seg = df.groupby(['Segment', 'Priorite'], as_index=False).agg(
+        Volume_clients=('Customer ID', 'nunique'),
+        CA=('Monetaire_Total_Depense', 'sum'),
+        Panier_moyen=('Monetaire_Total_Depense', 'mean')
+    )
+    seg['Marge'] = seg['CA'] * taux_marge
+    return seg.sort_values('Priorite')
+
+
+def format_segment_table(seg, df):
+    display_df = seg[['Segment', 'Volume_clients', 'CA', 'Marge', 'Panier_moyen', 'Priorite']].copy()
+
+    blank_row = pd.DataFrame({
+        'Segment': [''],
+        'Volume_clients': [''],
+        'CA': [''],
+        'Marge': [''],
+        'Panier_moyen': [''],
+        'Priorite': ['']
+    })
+
+    total_row = pd.DataFrame({
+        'Segment': ['TOTAL'],
+        'Volume_clients': [df['Customer ID'].nunique()],
+        'CA': [seg['CA'].sum()],
+        'Marge': [seg['Marge'].sum()],
+        'Panier_moyen': [''],
+        'Priorite': ['']
+    })
+
+    display_df = pd.concat([display_df, blank_row, total_row], ignore_index=True)
+
+    # Formatage
+    for col in ['CA', 'Marge', 'Panier_moyen']:
+        display_df[col] = pd.to_numeric(display_df[col], errors='coerce')
+        display_df[col] = display_df[col].round(2)
+        display_df[col] = display_df[col].map(lambda x: f"{x:,.2f}" if pd.notnull(x) else "")
+
+    return display_df
+
+
+# ============================
+# 📌 CALCUL DES SCÉNARIOS
+# ============================
+def compute_scenario(seg_row, taux_marge, part_clients, uplift_ca):
+    ca_base = seg_row['CA']
+    marge_base = seg_row['Marge']
+
+    part_dec = part_clients / 100
+    uplift_dec = uplift_ca / 100
+
+    ca_incremental = ca_base * part_dec * uplift_dec
+    marge_incrementale = ca_incremental * taux_marge
+    ca_nouveau = ca_base + ca_incremental
+    marge_nouvelle = marge_base + marge_incrementale
+
+    return {
+        "ca_base": ca_base,
+        "ca_incremental": ca_incremental,
+        "ca_nouveau": ca_nouveau,
+        "marge_base": marge_base,
+        "marge_incrementale": marge_incrementale,
+        "marge_nouvelle": marge_nouvelle
+    }
+
+
+# ============================
+# 📌 GRAPHIQUE + EXPORT
+# ============================
+def plot_scenario_chart(ca_base, ca_incremental):
+    ca_base_k = ca_base / 1000
+    ca_inc_k = ca_incremental / 1000
+
+    fig, ax = plt.subplots(figsize=(4, 4))
+
+    ax.bar(["Scénario"], [ca_base_k], label="CA base", color="#4e79a7")
+    ax.bar(["Scénario"], [ca_inc_k], bottom=[ca_base_k], label="CA additionnel", color="#f28e2b")
+
+    total = ca_base_k + ca_inc_k
+
+    ax.set_ylabel("CA (k€)")
+    ax.set_ylim(0, total * 1.25)
+    ax.legend()
+
+    ax.text(0, total, f"{total:,.0f} k€", ha="center", va="bottom", fontsize=10, fontweight="bold")
+
+    ax.ticklabel_format(style='plain', axis='y')
+
+    return fig
+
+
+def export_figure_png(fig):
+    buffer = BytesIO()
+    fig.savefig(buffer, format="png", bbox_inches="tight")
+    buffer.seek(0)
+    return buffer
