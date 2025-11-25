@@ -3,53 +3,147 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-# ======================================================
-# 1) Chargement des données RFM
-# ======================================================
+# ------------------------------------------------
+# CONFIG PAGE
+# ------------------------------------------------
+st.set_page_config(
+    page_title="Scénarios Marketing – CLV",
+    page_icon="📈",
+    layout="wide",
+)
+
+# ------------------------------------------------
+# CSS GLOBAL (repris EXACTEMENT du thème principal)
+# ------------------------------------------------
+st.markdown("""
+<style>
+.main .block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    padding-left: 3rem;
+    padding-right: 3rem;
+}
+
+.section-bubble {
+    background-color: #020617;
+    border-radius: 14px;
+    border: 1px solid #1f2937;
+    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+    margin-bottom: 1.3rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.section-pill {
+    padding: 0.15rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid #3b4252;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #e5e7eb;
+    background: radial-gradient(circle at top left, #1d4ed8 0, #020617 60%);
+    white-space: nowrap;
+}
+
+.section-title {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #e5e7eb !important;
+    margin: 0;
+    padding: 0;
+}
+
+.kpi-card {
+    background-color: #111827;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #3b4252;
+    text-align:center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+}
+.kpi-label {
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+.kpi-value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #f9fafb;
+    margin-top: 0.2rem;
+}
+
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------------------------------------
+# KPI card helper
+# ------------------------------------------------
+def _kpi(label, value):
+    return f"""
+    <div class="kpi-card">
+        <div class="kpi-label">{label}</div>
+        <div class="kpi-value">{value}</div>
+    </div>
+    """
+
+# ------------------------------------------------
+# LOAD DATA
+# ------------------------------------------------
 @st.cache_data
 def load_rfm():
     df = pd.read_csv("data/processed/df_rfm_resultat.csv")
     df["Date_Premier_Achat"] = pd.to_datetime(df["Date_Premier_Achat"])
     return df
 
-# ======================================================
-# 2) Segmentation RFM
-# ======================================================
 def label_rfm(percent):
     if percent >= 400: return "Champions"
     elif percent >= 300: return "Fidèles"
     elif percent >= 200: return "Potentiels"
     elif percent >= 120: return "À Risque"
-    elif percent >= 100: return "Perdus"
     else: return "Perdus"
 
-# ======================================================
-# 3) CLV = AOV × fréquence × ancienneté
-# ======================================================
 def calculate_clv(aov, freq, lifespan_years):
     return aov * freq * lifespan_years
 
 def compute_lifespan_years(df):
-    """Ancienneté = aujourd’hui - première commande"""
-    lifespan_days = (pd.Timestamp.today() - df["Date_Premier_Achat"]).dt.days
-    return (lifespan_days / 365).mean()
+    days = (pd.Timestamp.today() - df["Date_Premier_Achat"]).dt.days
+    return (days / 365).mean()
 
-# ======================================================
-# PAGE STREAMLIT
-# ======================================================
+
+# ------------------------------------------------
+# PAGE LOGIC
+# ------------------------------------------------
 def show_scenarios():
 
-    st.title("📈 Simulation d'Impact Marketing (CLV)")
-    st.markdown("Analyse l'effet d'une remise, de la marge et de la rétention sur la CLV.")
+    # ------------------------------------------------
+    # HEADER PAGE
+    # ------------------------------------------------
+    st.markdown("""
+    <div class="section-bubble">
+        <div class="section-header">
+            <div class="section-pill">Analyse</div>
+            <div class="section-title">📈 Simulation d'Impact Marketing (CLV)</div>
+        </div>
+        <p style='color:#9ca3af'>Analyse l'effet d'une remise, de la marge et de la rétention sur la valeur vie client.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # ---------------------------
-    # Charger les données
-    # ---------------------------
     df = load_rfm()
     df["Segment_RFM"] = df["RFM_Pourcentage"].apply(label_rfm)
 
     # ---------------------------
-    # METRIQUES DE BASE
+    # BASE METRICS
     # ---------------------------
     aov = df["Monetaire_Total_Depense"].mean()
     freq = df["Frequence_Nb_Commandes"].mean()
@@ -57,9 +151,9 @@ def show_scenarios():
 
     clv_baseline = calculate_clv(aov, freq, lifespan)
 
-    # ---------------------------
-    # SIDEBAR (paramètres)
-    # ---------------------------
+    # ------------------------------------------------
+    # SIDEBAR
+    # ------------------------------------------------
     with st.sidebar:
         st.header("⚙️ Paramètres du scénario")
 
@@ -68,62 +162,56 @@ def show_scenarios():
         retention = st.slider("Taux de rétention (%)", 0.0, 100.0, 70.0)
         taux_actualisation = st.slider("Taux d'actualisation (%)", 0.0, 30.0, 10.0)
 
-        st.subheader("🎯 Segments RFM ciblés")
         segments_selected = st.multiselect(
-            "Choisir segments",
+            "🎯 Segments ciblés",
             df["Segment_RFM"].unique(),
             default=df["Segment_RFM"].unique().tolist()
         )
 
-        st.subheader("🎬 Scénarios prédéfinis")
-        if st.button("🚀 Croissance"):
-            remise = 5
-            retention = 90
-            marge = 25
-
-        if st.button("💰 Optimisation Marges"):
-            remise = 0
-            marge = 40
-            retention = 70
-
-        if st.button("🎯 Fidélisation"):
-            remise = 10
-            retention = 95
-            marge = 30
-
-    # ---------------------------
-    # Appliquer les filtres RFM
-    # ---------------------------
     df_filtered = df[df["Segment_RFM"].isin(segments_selected)]
 
     if df_filtered.empty:
-        st.error("Aucun client dans les segments sélectionnés.")
+        st.error("Aucun client dans cette sélection.")
         return
 
-    # ---------------------------
-    # Calculs du scénario
-    # ---------------------------
-    aov_new = df_filtered["Monetaire_Total_Depense"].mean() * (1 - remise / 100)
+    # ------------------------------------------------
+    # SCENARIO CALCUL
+    # ------------------------------------------------
+    aov_new = df_filtered["Monetaire_Total_Depense"].mean() * (1 - remise/100)
     freq_new = df_filtered["Frequence_Nb_Commandes"].mean()
-    lifespan_new = lifespan * (retention / 100)
+    lifespan_new = lifespan * (retention/100)
 
     clv_scenario = calculate_clv(aov_new, freq_new, lifespan_new)
-
     impact_pct = ((clv_scenario - clv_baseline) / clv_baseline) * 100
 
-    # ---------------------------
-    # KPI
-    # ---------------------------
-    col1, col2, col3 = st.columns(3)
+    # ------------------------------------------------
+    # KPI BUBBLE
+    # ------------------------------------------------
+    st.markdown("""
+    <div class="section-bubble">
+        <div class="section-header">
+            <div class="section-pill">Synthèse</div>
+            <div class="section-title">📌 Indicateurs CLV</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    col1.metric("CLV Baseline", f"{clv_baseline:,.2f} €")
-    col2.metric("CLV Scénario", f"{clv_scenario:,.2f} €", delta=f"{clv_scenario - clv_baseline:,.2f} €")
-    col3.metric("Impact (%)", f"{impact_pct:+.2f}%")
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(_kpi("CLV Baseline", f"{clv_baseline:,.2f} €"), unsafe_allow_html=True)
+    c2.markdown(_kpi("CLV Scénario", f"{clv_scenario:,.2f} €"), unsafe_allow_html=True)
+    c3.markdown(_kpi("Impact (%)", f"{impact_pct:+.2f}%"), unsafe_allow_html=True)
 
-    # ---------------------------
-    # GRAPHIQUE
-    # ---------------------------
-    st.subheader("📈 Sensibilité de la CLV au taux de rétention")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ------------------------------------------------
+    # SENSITIVITY CURVE
+    # ------------------------------------------------
+    st.markdown("""
+    <div class="section-bubble">
+        <div class="section-header">
+            <div class="section-pill">Analyse</div>
+            <div class="section-title">📉 Sensibilité au taux de rétention</div>
+        </div>
+    """, unsafe_allow_html=True)
 
     retention_range = np.linspace(0.1, 0.99, 12)
     clv_sensitivity = [
@@ -146,53 +234,29 @@ def show_scenarios():
     )
 
     st.plotly_chart(fig, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------------------
-    # RÉCAPITULATIF
-    # ---------------------------
-    st.subheader("🧾 Tableau Récapitulatif des Paramètres")
+    # ------------------------------------------------
+    # SUMMARY TABLE
+    # ------------------------------------------------
+    st.markdown("""
+    <div class="section-bubble">
+        <div class="section-header">
+            <div class="section-pill">Synthèse</div>
+            <div class="section-title">🧾 Récapitulatif</div>
+        </div>
+    """, unsafe_allow_html=True)
 
     recap = pd.DataFrame({
-        "Paramètre": [
-            "Marge", "Remise", "Rétention", "Taux d'actualisation",
-            "AOV recalculé", "Fréquence", "Durée de vie client (ans)"
-        ],
-        "Valeur": [
-            f"{marge}%",
-            f"{remise}%",
-            f"{retention}%",
-            f"{taux_actualisation}%",
-            f"{aov_new:,.2f} €",
-            f"{freq_new:,.2f}",
-            f"{lifespan_new:,.2f} ans"
-        ]
+        "Paramètre": ["Marge", "Remise", "Rétention", "Taux d'actualisation",
+                      "AOV recalculé", "Fréquence", "Durée de vie client"],
+        "Valeur": [f"{marge}%", f"{remise}%", f"{retention}%", f"{taux_actualisation}%",
+                   f"{aov_new:,.2f} €", f"{freq_new:,.2f}", f"{lifespan_new:,.2f} ans"]
     })
-
     st.table(recap)
 
-    # ---------------------------
-    # EXPORTS
-    # ---------------------------
-    st.subheader("📤 Export des résultats")
-
-    # Export CSV → clients filtrés
-    csv = df_filtered.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="📄 Télécharger les données filtrées (CSV)",
-        data=csv,
-        file_name="clients_filtres.csv",
-        mime="text/csv"
-    )
-
-    # Export HTML → graphique interactif
-    html_graph = fig.to_html(full_html=False, include_plotlyjs="cdn")
-    st.download_button(
-        label="📊 Télécharger le graphique (HTML)",
-        data=html_graph.encode("utf-8"),
-        file_name="graphique_clv.html",
-        mime="text/html"
-    )
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# Lancer la page
+# RUN PAGE
 show_scenarios()
