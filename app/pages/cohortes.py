@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import compute_cohort_matrix, load_data, plot_retention_heatmap, densite, plot_retention_curves, plot_average_retention, display_retention_kpis
+from utils import compute_cohort_matrix, load_data, plot_retention_heatmap, densite, plot_retention_curves, plot_average_retention
 
 
 def main():

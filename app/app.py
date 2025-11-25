@@ -156,9 +156,6 @@ def show_dashboard():
 
     st.title("📊 Tableau de Bord Marketing")
 
-    # ---------------------------
-    # Load data
-    # ---------------------------
     df = load_data()
     if df.empty:
         st.error("Impossible de charger les données.")
@@ -237,9 +234,6 @@ def show_dashboard():
     # KPIs OVERVIEW
     # ---------------------------
     st.markdown("## 🌟 KPIs – Overview")
-
-    df_f["FirstPurchase"] = df_f.groupby("CustomerID")["InvoiceDate"].transform("min")
-    df_f["CohortAge"] = ((df_f["InvoiceDate"] - df_f["FirstPurchase"]).dt.days // 30)
 
     rev_acquisition = df[df['CohortIndex'] == 0]['TotalPrice'].sum()
     rev_retention = df[df['CohortIndex'] > 0]['TotalPrice'].sum()
