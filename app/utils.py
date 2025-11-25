@@ -98,6 +98,26 @@ def plot_retention_heatmap(cohorts_pivot):
 
     st.pyplot(fig, transparent=True, use_container_width=True)
 
+    with st.expander("où investir, où réduire les dépenses", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### Ou investir")
+            st.warning(
+                """
+                La heatmap montre les cohortes qui restent bleues longtemps (clients fidèles)
+                Il faut garder ces clients car il "répondent"
+                """
+            )
+        
+        with col2:
+            st.markdown("### segments/cohortes qui répondent")
+            st.warning(
+                """
+                La heatmap montre les cohortes qui deviennent blanches tout de suite
+                Il faut réduire les dépenses sur ces cohortes car ils ne "répondent pas"
+                """
+            )
+
 # Ce graphe sert à analyser le panier type des clients en fonction de leur âge de cohorte 
 # on pourra observer qu'un client ancien a un panier moyen plus élevé qu'un clien récent
 def densite(df):
