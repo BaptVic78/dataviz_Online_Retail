@@ -34,7 +34,6 @@ st.markdown(
         padding-right: 3rem;
     }
 
-    /* --- Titres "en bulles" --- */
     .section-bubble {
         background-color: #020617;
         border-radius: 14px;
@@ -63,12 +62,13 @@ st.markdown(
     }
 
     .section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #f9fafb;
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        color: #e5e7eb !important;
+        margin: 0;
+        padding: 0;
     }
 
-    /* KPI cards */
     .kpi-card {
         background-color: #111827;
         padding: 12px 16px;
@@ -90,7 +90,6 @@ st.markdown(
         margin-top: 0.2rem;
     }
 
-    /* Badges filtres */
     .filter-badge {
         background: #2563eb;
         color: white;
@@ -101,24 +100,6 @@ st.markdown(
         margin-right: 6px;
     }
 
-    /* Cartes navigation */
-    .nav-card {
-        background-color: #020617;
-        border-radius: 12px;
-        border: 1px solid #1f2937;
-        padding: 1rem 1.2rem;
-        height: 100%;
-    }
-    .nav-card h3 {
-        margin-bottom: 0.3rem;
-    }
-    .nav-card p {
-        font-size: 0.9rem;
-        color: #e5e7eb;
-        margin-bottom: 0.6rem;
-    }
-
-    /* Tooltip */
     .tooltip {
         position: relative;
         display: inline-block;
@@ -146,48 +127,17 @@ st.markdown(
         visibility: visible;
     }
 
-    /* On masque le menu/ footer pour un rendu plus "produit" */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-
-    .section-bubble {
-    background: #0d1117;
-    border: 1px solid #1f2937;
-    padding: 5px 26px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 25px;
-    margin-bottom: 15px;
-}
-
-/* Badge bleu */
-.section-tag {
-    background: linear-gradient(145deg, #2563eb, #1e40af);
-    padding: 6px 14px;
-    border-radius: 6px;
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: .04em;
-}
-
-/* 🆕 TITRE PLUS GRAND ET PLUS LARGE */
-.section-title {
-    font-size: 2rem !important;   /* avant c’était 1rem */
-    font-weight: 700 !important;
-    color: #e5e7eb !important;
-    margin: 0;
-    padding: 0;
-}
-
-
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+# ------------------------------------------------
+# Fonctions utilitaires
+# ------------------------------------------------
 
 def _kpi(label, value):
     return f"""
@@ -195,11 +145,8 @@ def _kpi(label, value):
             <div class="kpi-label">{label}</div>
             <div class="kpi-value">{value}</div>
         </div>
-        """
+    """
 
-# ------------------------------------------------
-#      TOOLTIP (infobulles ℹ️)
-# ------------------------------------------------
 def tooltip(label, text):
     return f"""
     <span class='tooltip'>{label} ℹ️
@@ -207,14 +154,12 @@ def tooltip(label, text):
     </span>
     """
 
-# ------------------------------------------------
-#      CLV SAFE
-# ------------------------------------------------
 def compute_clv_safe(aov, freq, lifespan):
     try:
         return calculate_clv(aov, freq, lifespan)
     except Exception:
         return aov * freq * lifespan
+
 
 # ------------------------------------------------
 # EXPORT CSV
@@ -237,7 +182,7 @@ def export_png_plot(fig, title="graphique"):
         buf = io.BytesIO()
         fig.write_image(buf, format="png", scale=2)
         st.download_button(
-            label="🖼️ Export PNG du CA",
+            label="🖼️ Export PNG",
             data=buf.getvalue(),
             file_name=f"{title}_{datetime.now().strftime('%Y-%m-%d_%Hh%M')}.png",
             mime="image/png"
@@ -251,15 +196,14 @@ def export_png_plot(fig, title="graphique"):
         )
 
 # ------------------------------------------------
-#             DASHBOARD PRINCIPAL
+# MAIN DASHBOARD
 # ------------------------------------------------
+
 def show_dashboard():
 
     st.markdown(
-        "<h1 style='margin-bottom:0.2rem;'>📊 Tableau de Bord Marketing</h1>"
-        "<p style='color:#9ca3af;margin-bottom:1.2rem;'>"
-        "Suivi global des performances e-commerce, segments RFM et indicateurs de rétention."
-        "</p>",
+        "<h1>📊 Tableau de Bord Marketing</h1>"
+        "<p style='color:#9ca3af;'>Suivi global des performances e-commerce, RFM et rétention.</p>",
         unsafe_allow_html=True,
     )
 
@@ -268,13 +212,12 @@ def show_dashboard():
         st.error("Impossible de charger les données.")
         return
 
+    # Dates
     df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
     df["Month"] = df["InvoiceDate"].dt.to_period("M").astype(str)
     df["Quarter"] = df["InvoiceDate"].dt.to_period("Q").astype(str)
 
-    # ---------------------------
-    # Load RFM
-    # ---------------------------
+    # Chargement RFM
     df_rfm = pd.read_csv("data/processed/df_rfm_resultat.csv")
 
     def label_rfm(percent):
@@ -287,9 +230,9 @@ def show_dashboard():
 
     df_rfm["RFM_Label"] = df_rfm["RFM_Pourcentage"].apply(label_rfm)
 
-    # ---------------------------
-    # Filtres (sidebar)
-    # ---------------------------
+    # ------------------------------------------------
+    # 🎛 SIDEBAR — Tous les filtres
+    # ------------------------------------------------
     with st.sidebar:
         st.header("🎛 Filtres")
 
@@ -302,11 +245,17 @@ def show_dashboard():
         threshold = st.slider("Seuil minimum (€)", 0.0, float(df["TotalPrice"].quantile(0.95)), 0.0)
         returns_mode = st.radio("Retours", ["Inclure", "Exclure", "Neutraliser"])
 
-    # ---------------------------
+        # ⭐ FILTRE RFM
+        rfm_types = ["Tous"] + sorted(df_rfm["RFM_Label"].unique())
+        rfm_choice = st.selectbox("Type de client (RFM)", rfm_types)
+
+    # ------------------------------------------------
     # Application des filtres
-    # ---------------------------
-    df_f = df[(df["InvoiceDate"].dt.date >= start_date) &
-              (df["InvoiceDate"].dt.date <= end_date)].copy()
+    # ------------------------------------------------
+    df_f = df[
+        (df["InvoiceDate"].dt.date >= start_date) &
+        (df["InvoiceDate"].dt.date <= end_date)
+    ].copy()
 
     if country_choice != "Tous":
         df_f = df_f[df_f["Country"] == country_choice]
@@ -320,9 +269,15 @@ def show_dashboard():
     if returns_mode == "Neutraliser":
         df_f.loc[df_f["Quantity"] < 0, "TotalPrice"] = 0
 
-    # ---------------------------
-    # KPIs PRINCIPAUX (bulle)
-    # ---------------------------
+    # ⭐ Filtre RFM
+    if rfm_choice != "Tous":
+        selected_ids = df_rfm[df_rfm["RFM_Label"] == rfm_choice]["Customer ID"].unique()
+        df_f = df_f[df_f["CustomerID"].isin(selected_ids)]
+        st.markdown(f"<span class='filter-badge'>Segment client : {rfm_choice}</span>", unsafe_allow_html=True)
+
+    # ------------------------------------------------
+    # KPIs PRINCIPAUX (TOP)
+    # ------------------------------------------------
     st.markdown(
         """
         <div class="section-bubble">
@@ -336,62 +291,74 @@ def show_dashboard():
 
     total_revenue = df_f["TotalPrice"].sum()
     n_customers = df_f["CustomerID"].nunique()
-    avg_order_value = total_revenue / max(len(df_f), 1)
+    n_tx = len(df_f)
+    avg_order_value = total_revenue / max(n_tx, 1)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.markdown(_kpi("Clients actifs", f"{n_customers:,}"), unsafe_allow_html=True)
     c2.markdown(_kpi("CA total", f"{total_revenue:,.0f} €"), unsafe_allow_html=True)
     c3.markdown(_kpi("Panier moyen", f"{avg_order_value:,.2f} €"), unsafe_allow_html=True)
-    c4.markdown(_kpi("Transactions", f"{len(df_f):,}"), unsafe_allow_html=True)
+    c4.markdown(_kpi("Transactions", f"{n_tx:,}"), unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle KPIs principaux
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------------------
-    # KPIs OVERVIEW (bulle)
-    # ---------------------------
+# -------------- PARTIE 2 ARRIVE DANS LE PROCHAIN MESSAGE --------------
+    # ------------------------------------------------
+    # KPIs RÉTENTION & CLV
+    # ------------------------------------------------
     st.markdown(
         """
         <div class="section-bubble">
             <div class="section-header">
-                <div class="section-pill">Rétention & valeur client</div>
-                <div class="section-title">🌟 KPIs – Overview</div>
+                <div class="section-pill">Rétention & Valeur client</div>
+                <div class="section-title">🌟 KPIs – Rétention & CLV</div>
             </div>
         """,
         unsafe_allow_html=True,
     )
 
-    rev_acquisition = df[df['CohortIndex'] == 0]['TotalPrice'].sum()
-    rev_retention = df[df['CohortIndex'] > 0]['TotalPrice'].sum()
+    # Recalcul propre des métriques
+    rev_acquisition = df[df["CohortIndex"] == 0]["TotalPrice"].sum()
+    rev_retention = df[df["CohortIndex"] > 0]["TotalPrice"].sum()
     share_retention = (rev_retention / total_revenue) * 100 if total_revenue > 0 else 0
+
     avg_freq = compute_avg_purchase_frequency(df_f)
     avg_lifespan = compute_customer_lifespan(df_f)
     clv_baseline = compute_clv_safe(avg_order_value, avg_freq, avg_lifespan)
     north_star = df_f.groupby("Month")["InvoiceNo"].nunique().mean()
 
-    t_seg = "Nombre de segments RFM basé sur RFM_Pourcentage."
+    t_seg = "Nombre de segments RFM identifiés."
     t_clv = (
-    "CLV = valeur totale qu’un client rapporte sur sa durée de vie.\n"
-    "Formule : Panier moyen × Fréquence × Durée de vie.\n"
-    f"Calcul : {avg_order_value:,.0f}€ × {avg_freq:.2f} × {avg_lifespan:.1f}."
-)
-    t_ns = "Nombre moyen de commandes mensuelles uniques."
+        "CLV = Panier moyen × Fréquence × Durée de vie.\n"
+        f"Calcul = {avg_order_value:,.0f}€ × {avg_freq:.2f} × {avg_lifespan:.1f}"
+    )
+    t_ns = "Nombre moyen de commandes uniques par mois."
 
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-    help_active = "Nombre de clients uniques ayant passé au moins une commande sur la période sélectionnée."
-    c1.markdown(_kpi(tooltip("Clients actifs", help_active), f"{n_customers:,}"), unsafe_allow_html=True)
-    help_acq = "Revenu généré par les nouveaux clients (Mois 0) sur la période."
-    c2.markdown(_kpi(tooltip("CA Acquisition", help_acq), f"{rev_acquisition:,.0f} €"), unsafe_allow_html=True)
-    help_ret = f"Revenu des clients historiques (Mois > 0). Représente {share_retention:.1f}% du CA total."
-    c3.markdown(_kpi(tooltip("CA Rétention", help_ret), f"{rev_retention:,.0f} €"), unsafe_allow_html=True)
-    c4.markdown(_kpi(tooltip("Segments RFM", t_seg), df_rfm["RFM_Label"].nunique()), unsafe_allow_html=True)
-    c5.markdown(_kpi(tooltip("CLV baseline", t_clv), f"{clv_baseline:,.0f} €"), unsafe_allow_html=True)
-    c6.markdown(_kpi(tooltip("North Star", t_ns), f"{north_star:,.0f}"), unsafe_allow_html=True)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle KPIs overview
+    col1.markdown(_kpi(tooltip("Clients actifs", "Clients avec ≥ 1 achat"), f"{n_customers:,}"),
+                  unsafe_allow_html=True)
 
-    # ---------------------------
-    # TENDANCE CA (bulle)
-    # ---------------------------
+    col2.markdown(_kpi(tooltip("CA Acquisition", "Clients nouveaux – Cohorte 0"),
+                       f"{rev_acquisition:,.0f} €"), unsafe_allow_html=True)
+
+    col3.markdown(_kpi(tooltip("CA Rétention", f"{share_retention:.1f}% du CA total"),
+                       f"{rev_retention:,.0f} €"), unsafe_allow_html=True)
+
+    col4.markdown(_kpi(tooltip("Segments RFM", t_seg),
+                       df_rfm["RFM_Label"].nunique()), unsafe_allow_html=True)
+
+    col5.markdown(_kpi(tooltip("CLV Baseline", t_clv),
+                       f"{clv_baseline:,.0f} €"), unsafe_allow_html=True)
+
+    col6.markdown(_kpi(tooltip("North Star", t_ns),
+                       f"{north_star:,.0f}"), unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ------------------------------------------------
+    # TENDANCE DU CA
+    # ------------------------------------------------
     st.markdown(
         """
         <div class="section-bubble">
@@ -407,16 +374,16 @@ def show_dashboard():
     rev_time = df_f.groupby(time_col)["TotalPrice"].sum().reset_index()
 
     fig = px.line(rev_time, x=time_col, y="TotalPrice", markers=True)
-    fig.update_traces(text=rev_time["TotalPrice"].round(0), textposition="top center")
+    fig.update_traces(text=rev_time["TotalPrice"].round(0))
 
     st.plotly_chart(fig, use_container_width=True)
     export_png_plot(fig, title="tendance_CA")
 
-    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle tendance CA
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------------------
-    # SEGMENTS RFM (bulle)
-    # ---------------------------
+    # ------------------------------------------------
+    # TABLEAU RFM
+    # ------------------------------------------------
     st.markdown(
         """
         <div class="section-bubble">
@@ -430,21 +397,18 @@ def show_dashboard():
 
     rfm_display = df_rfm[
         [
-            "Customer ID",
-            "Monetaire_Total_Depense",
-            "Frequence_Nb_Commandes",
-            "R_Score", "F_Score", "M_Score",
-            "RFM_Somme", "RFM_Pourcentage",
-            "RFM_Label"
+            "Customer ID", "Monetaire_Total_Depense", "Frequence_Nb_Commandes",
+            "R_Score", "F_Score", "M_Score", "RFM_Somme",
+            "RFM_Pourcentage", "RFM_Label"
         ]
     ]
 
     st.dataframe(rfm_display, use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle RFM
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------------------
-    # TOP PRODUITS (bulle)
-    # ---------------------------
+    # ------------------------------------------------
+    # TOP PRODUITS
+    # ------------------------------------------------
     st.markdown(
         """
         <div class="section-bubble">
@@ -459,18 +423,17 @@ def show_dashboard():
     top_sales = df_f.groupby("Description")["Quantity"].sum().sort_values(ascending=False).head(10)
     top_returns = df_f[df_f["Quantity"] < 0].groupby("Description")["Quantity"].sum().sort_values().head(10)
 
-    c1, c2 = st.columns(2)
-    c1.write("### Produits les plus vendus")
-    c1.dataframe(top_sales)
+    col1, col2 = st.columns(2)
+    col1.write("### Produits les plus vendus")
+    col1.dataframe(top_sales)
+    col2.write("### Produits les plus retournés")
+    col2.dataframe(top_returns)
 
-    c2.write("### Produits les plus retournés")
-    c2.dataframe(top_returns)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle top produits
-
-    # ---------------------------
-    # EXPORT CSV (bulle)
-    # ---------------------------
+    # ------------------------------------------------
+    # EXPORT CSV
+    # ------------------------------------------------
     st.markdown(
         """
         <div class="section-bubble">
@@ -483,47 +446,46 @@ def show_dashboard():
     )
 
     export_filtered_csv(df_f)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle export
-
-    # ---------------------------
-    # NAVIGATION (bulle)
-    # ---------------------------
+    # ------------------------------------------------
+    # NAVIGATION EN BAS
+    # ------------------------------------------------
     st.markdown(
         """
         <div class="section-bubble">
             <div class="section-header">
                 <div class="section-pill">Navigation</div>
-                <div class="section-title">Où voulez-vous aller ?</div>
+                <div class="section-title">🧭 Où voulez-vous aller ?</div>
             </div>
         """,
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3 = st.columns(3)
+    nav1, nav2, nav3 = st.columns(3)
 
-    with c1:
+    with nav1:
         st.markdown("<div class='nav-card'>", unsafe_allow_html=True)
         st.markdown("### 📉 Diagnostic")
-        st.write("Analysez la rétention et le comportement par cohorte.")
-        st.page_link("pages/cohortes.py", label="Voir les Cohortes", icon="📊", use_container_width=True)
+        st.write("Analysez la rétention et les cohortes.")
+        st.page_link("pages/cohortes.py", label="Voir les Cohortes", icon="📊")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with c2:
+    with nav2:
         st.markdown("<div class='nav-card'>", unsafe_allow_html=True)
         st.markdown("### 🎯 Segmentation")
-        st.write("Priorisez vos actions grâce à l'analyse RFM.")
-        st.page_link("pages/segments.py", label="Voir les Segments RFM", icon="👥", use_container_width=True)
+        st.write("Analyse RFM complète.")
+        st.page_link("pages/segments.py", label="Segments RFM", icon="👥")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with c3:
+    with nav3:
         st.markdown("<div class='nav-card'>", unsafe_allow_html=True)
         st.markdown("### 🔮 Prédictions")
-        st.write("Simulez vos scénarios de croissance (CLV).")
-        st.page_link("pages/scenarios.py", label="Voir le Simulateur", icon="🚀", use_container_width=True)
+        st.write("Simulateur CLV.")
+        st.page_link("pages/scenarios.py", label="Simulateur CLV", icon="🚀")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle navigation
+    st.markdown("</div>", unsafe_allow_html=True)  # Fin navigation
 
 
 # ------------------------------------------------
