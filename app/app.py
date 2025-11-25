@@ -21,16 +21,61 @@ st.set_page_config(
     layout="wide",
 )
 
-# CSS général
+# ===========================
+#        CSS GLOBAL
+# ===========================
 st.markdown(
     """
     <style>
+    .main .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+
+    /* --- Titres "en bulles" --- */
+    .section-bubble {
+        background-color: #020617;
+        border-radius: 14px;
+        border: 1px solid #1f2937;
+        padding: 1.2rem 1.4rem 1.4rem 1.4rem;
+        margin-bottom: 1.3rem;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+    }
+
+    .section-pill {
+        padding: 0.15rem 0.8rem;
+        border-radius: 999px;
+        border: 1px solid #3b4252;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #e5e7eb;
+        background: radial-gradient(circle at top left, #1d4ed8 0, #020617 60%);
+        white-space: nowrap;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #f9fafb;
+    }
+
+    /* KPI cards */
     .kpi-card {
-        background-color: #1f2933;
+        background-color: #111827;
         padding: 12px 16px;
-        border-radius: 8px;
+        border-radius: 10px;
         border: 1px solid #3b4252;
         text-align:center;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
     }
     .kpi-label {
         font-size: 0.8rem;
@@ -42,7 +87,10 @@ st.markdown(
         font-size: 1.4rem;
         font-weight: 600;
         color: #f9fafb;
+        margin-top: 0.2rem;
     }
+
+    /* Badges filtres */
     .filter-badge {
         background: #2563eb;
         color: white;
@@ -52,6 +100,90 @@ st.markdown(
         display: inline-block;
         margin-right: 6px;
     }
+
+    /* Cartes navigation */
+    .nav-card {
+        background-color: #020617;
+        border-radius: 12px;
+        border: 1px solid #1f2937;
+        padding: 1rem 1.2rem;
+        height: 100%;
+    }
+    .nav-card h3 {
+        margin-bottom: 0.3rem;
+    }
+    .nav-card p {
+        font-size: 0.9rem;
+        color: #e5e7eb;
+        margin-bottom: 0.6rem;
+    }
+
+    /* Tooltip */
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+        color: #60a5fa;
+        font-weight: bold;
+    }
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 260px;
+        background-color: #111827;
+        color: #f9fafb;
+        text-align: left;
+        border-radius: 6px;
+        padding: 10px;
+        border: 1px solid #374151;
+        font-size: 0.75rem;
+        position: absolute;
+        z-index: 10;
+        bottom: 125%; 
+        left: 50%; 
+        margin-left: -130px;
+    }
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+    }
+
+    /* On masque le menu/ footer pour un rendu plus "produit" */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    .section-bubble {
+    background: #0d1117;
+    border: 1px solid #1f2937;
+    padding: 5px 26px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+/* Badge bleu */
+.section-tag {
+    background: linear-gradient(145deg, #2563eb, #1e40af);
+    padding: 6px 14px;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+}
+
+/* 🆕 TITRE PLUS GRAND ET PLUS LARGE */
+.section-title {
+    font-size: 2rem !important;   /* avant c’était 1rem */
+    font-weight: 700 !important;
+    color: #e5e7eb !important;
+    margin: 0;
+    padding: 0;
+}
+
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -68,37 +200,6 @@ def _kpi(label, value):
 # ------------------------------------------------
 #      TOOLTIP (infobulles ℹ️)
 # ------------------------------------------------
-st.markdown("""
-<style>
-.tooltip {
-    position: relative;
-    display: inline-block;
-    cursor: pointer;
-    color: #60a5fa;
-    font-weight: bold;
-}
-.tooltip .tooltiptext {
-    visibility: hidden;
-    width: 260px;
-    background-color: #111827;
-    color: #f9fafb;
-    text-align: left;
-    border-radius: 6px;
-    padding: 10px;
-    border: 1px solid #374151;
-    font-size: 0.75rem;
-    position: absolute;
-    z-index: 10;
-    bottom: 125%; 
-    left: 50%; 
-    margin-left: -130px;
-}
-.tooltip:hover .tooltiptext {
-    visibility: visible;
-}
-</style>
-""", unsafe_allow_html=True)
-
 def tooltip(label, text):
     return f"""
     <span class='tooltip'>{label} ℹ️
@@ -154,7 +255,13 @@ def export_png_plot(fig, title="graphique"):
 # ------------------------------------------------
 def show_dashboard():
 
-    st.title("📊 Tableau de Bord Marketing")
+    st.markdown(
+        "<h1 style='margin-bottom:0.2rem;'>📊 Tableau de Bord Marketing</h1>"
+        "<p style='color:#9ca3af;margin-bottom:1.2rem;'>"
+        "Suivi global des performances e-commerce, segments RFM et indicateurs de rétention."
+        "</p>",
+        unsafe_allow_html=True,
+    )
 
     # ---------------------------
     # Load data
@@ -184,7 +291,7 @@ def show_dashboard():
     df_rfm["RFM_Label"] = df_rfm["RFM_Pourcentage"].apply(label_rfm)
 
     # ---------------------------
-    # Filtres
+    # Filtres (sidebar)
     # ---------------------------
     with st.sidebar:
         st.header("🎛 Filtres")
@@ -217,9 +324,18 @@ def show_dashboard():
         df_f.loc[df_f["Quantity"] < 0, "TotalPrice"] = 0
 
     # ---------------------------
-    # KPIs PRINCIPAUX
+    # KPIs PRINCIPAUX (bulle)
     # ---------------------------
-    st.markdown("## 📌 KPIs Principaux")
+    st.markdown(
+        """
+        <div class="section-bubble">
+            <div class="section-header">
+                <div class="section-pill">Vue globale</div>
+                <div class="section-title">📌 KPIs principaux</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     total_revenue = df_f["TotalPrice"].sum()
     n_customers = df_f["CustomerID"].nunique()
@@ -231,12 +347,21 @@ def show_dashboard():
     c3.markdown(_kpi("Panier moyen", f"{avg_order_value:,.2f} €"), unsafe_allow_html=True)
     c4.markdown(_kpi("Transactions", f"{len(df_f):,}"), unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle KPIs principaux
 
     # ---------------------------
-    # KPIs OVERVIEW
+    # KPIs OVERVIEW (bulle)
     # ---------------------------
-    st.markdown("## 🌟 KPIs – Overview")
+    st.markdown(
+        """
+        <div class="section-bubble">
+            <div class="section-header">
+                <div class="section-pill">Rétention & valeur client</div>
+                <div class="section-title">🌟 KPIs – Overview</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     df_f["FirstPurchase"] = df_f.groupby("CustomerID")["InvoiceDate"].transform("min")
     df_f["CohortAge"] = ((df_f["InvoiceDate"] - df_f["FirstPurchase"]).dt.days // 30)
@@ -249,7 +374,6 @@ def show_dashboard():
     clv_baseline = compute_clv_safe(avg_order_value, avg_freq, avg_lifespan)
     north_star = df_f.groupby("Month")["InvoiceNo"].nunique().mean()
 
-    t_ca = "CA moyen généré en fonction de l’ancienneté."
     t_seg = "Nombre de segments RFM basé sur RFM_Pourcentage."
     t_clv = f"CLV = {avg_order_value:,.0f}€ × {avg_freq:.2f} × {avg_lifespan:.1f}."
     t_ns = "Nombre moyen de commandes mensuelles uniques."
@@ -265,12 +389,21 @@ def show_dashboard():
     c5.markdown(_kpi(tooltip("CLV baseline", t_clv), f"{clv_baseline:,.0f} €"), unsafe_allow_html=True)
     c6.markdown(_kpi(tooltip("North Star", t_ns), f"{north_star:,.0f}"), unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle KPIs overview
 
     # ---------------------------
-    # TENDANCE CA
+    # TENDANCE CA (bulle)
     # ---------------------------
-    st.subheader("📈 Tendances du CA")
+    st.markdown(
+        """
+        <div class="section-bubble">
+            <div class="section-header">
+                <div class="section-pill">Performance</div>
+                <div class="section-title">📈 Tendances du chiffre d’affaires</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     time_col = "Month" if time_unit == "Mois" else "Quarter"
     rev_time = df_f.groupby(time_col)["TotalPrice"].sum().reset_index()
@@ -281,10 +414,21 @@ def show_dashboard():
     st.plotly_chart(fig, use_container_width=True)
     export_png_plot(fig, title="tendance_CA")
 
+    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle tendance CA
+
     # ---------------------------
-    # SEGMENTS RFM
+    # SEGMENTS RFM (bulle)
     # ---------------------------
-    st.subheader("🧩 Segments RFM")
+    st.markdown(
+        """
+        <div class="section-bubble">
+            <div class="section-header">
+                <div class="section-pill">Segmentation</div>
+                <div class="section-title">🧩 Segments RFM</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     rfm_display = df_rfm[
         [
@@ -298,11 +442,21 @@ def show_dashboard():
     ]
 
     st.dataframe(rfm_display, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle RFM
 
     # ---------------------------
-    # TOP PRODUITS
+    # TOP PRODUITS (bulle)
     # ---------------------------
-    st.subheader("🏆 Top Produits")
+    st.markdown(
+        """
+        <div class="section-bubble">
+            <div class="section-header">
+                <div class="section-pill">Catalogue</div>
+                <div class="section-title">🏆 Top produits</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     top_sales = df_f.groupby("Description")["Quantity"].sum().sort_values(ascending=False).head(10)
     top_returns = df_f[df_f["Quantity"] < 0].groupby("Description")["Quantity"].sum().sort_values().head(10)
@@ -314,33 +468,66 @@ def show_dashboard():
     c2.write("### Produits les plus retournés")
     c2.dataframe(top_returns)
 
+    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle top produits
+
     # ---------------------------
-    # EXPORT CSV
+    # EXPORT CSV (bulle)
     # ---------------------------
-    st.subheader("📤 Export des données filtrées")
+    st.markdown(
+        """
+        <div class="section-bubble">
+            <div class="section-header">
+                <div class="section-pill">Données</div>
+                <div class="section-title">📤 Export des données filtrées</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     export_filtered_csv(df_f)
 
-   # --- LA NAVIGATION ---
-    st.subheader("Où voulez-vous aller ?")
+    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle export
+
+    # ---------------------------
+    # NAVIGATION (bulle)
+    # ---------------------------
+    st.markdown(
+        """
+        <div class="section-bubble">
+            <div class="section-header">
+                <div class="section-pill">Navigation</div>
+                <div class="section-title">Où voulez-vous aller ?</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
+        st.markdown("<div class='nav-card'>", unsafe_allow_html=True)
         st.markdown("### 📉 Diagnostic")
         st.write("Analysez la rétention et le comportement par cohorte.")
-        # C'est ici que ça se passe :
         st.page_link("pages/cohortes.py", label="Voir les Cohortes", icon="📊", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with c2:
+        st.markdown("<div class='nav-card'>", unsafe_allow_html=True)
         st.markdown("### 🎯 Segmentation")
         st.write("Priorisez vos actions grâce à l'analyse RFM.")
         st.page_link("pages/segments.py", label="Voir les Segments RFM", icon="👥", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with c3:
+        st.markdown("<div class='nav-card'>", unsafe_allow_html=True)
         st.markdown("### 🔮 Prédictions")
         st.write("Simulez vos scénarios de croissance (CLV).")
         st.page_link("pages/scenarios.py", label="Voir le Simulateur", icon="🚀", use_container_width=True)
-        
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)  # fin bulle navigation
+
+
 # ------------------------------------------------
 # RUN APP
 # ------------------------------------------------
