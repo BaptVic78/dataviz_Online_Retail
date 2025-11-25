@@ -369,7 +369,11 @@ def show_dashboard():
     north_star = df_f.groupby("Month")["InvoiceNo"].nunique().mean()
 
     t_seg = "Nombre de segments RFM basé sur RFM_Pourcentage."
-    t_clv = f"CLV = {avg_order_value:,.0f}€ × {avg_freq:.2f} × {avg_lifespan:.1f}."
+    t_clv = (
+    "CLV = valeur totale qu’un client rapporte sur sa durée de vie.\n"
+    "Formule : Panier moyen × Fréquence × Durée de vie.\n"
+    f"Calcul : {avg_order_value:,.0f}€ × {avg_freq:.2f} × {avg_lifespan:.1f}."
+)
     t_ns = "Nombre moyen de commandes mensuelles uniques."
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
