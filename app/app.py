@@ -301,6 +301,7 @@ def show_dashboard():
     c4.markdown(_kpi("Transactions", f"{n_tx:,}"), unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
     # ------------------------------------------------
     # KPIs RÉTENTION & CLV
     # ------------------------------------------------
@@ -491,3 +492,4 @@ def show_dashboard():
 # ------------------------------------------------
 if __name__ == "__main__":
     show_dashboard()
+
