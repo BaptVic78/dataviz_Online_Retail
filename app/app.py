@@ -375,6 +375,22 @@ def show_dashboard():
     fig = px.line(rev_time, x=time_col, y="TotalPrice", markers=True)
     fig.update_traces(text=rev_time["TotalPrice"].round(0))
 
+    
+
+
+    filters_text = (
+        f"Période : {start_date} → {end_date} | "
+        f"Pays : {country_choice} | "
+        f"Retours : {returns_mode} | "
+        f"Client RFM : {rfm_choice} | "
+        f"Seuil : {threshold} €"
+    )
+
+    fig.update_layout(
+        title=f"Tendance du CA ({filters_text})",
+        title_font_size=14
+    )
+    
     st.plotly_chart(fig, use_container_width=True)
     export_png_plot(fig, title="tendance_CA")
 
