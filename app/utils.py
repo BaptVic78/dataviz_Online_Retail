@@ -165,7 +165,7 @@ def densite(df):
             ax=ax,
             warn_singular=False
         ) 
-        ax.set_title('courbes de densité de CA par Cohorte d\'acquisition', fontsize=16, color='white')
+        ax.set_title('courbes de densité de CA par age de cohorte', fontsize=16, color='white')
         ax.set_xlabel('Total du CA', fontsize=14)
         ax.set_ylabel('Densité', fontsize=14)
         ax.tick_params(colors='white')
