@@ -302,7 +302,7 @@ def show_dashboard():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# -------------- PARTIE 2 ARRIVE DANS LE PROCHAIN MESSAGE --------------
+    
     # ------------------------------------------------
     # KPIs RÉTENTION & CLV
     # ------------------------------------------------
@@ -493,3 +493,4 @@ def show_dashboard():
 # ------------------------------------------------
 if __name__ == "__main__":
     show_dashboard()
+
