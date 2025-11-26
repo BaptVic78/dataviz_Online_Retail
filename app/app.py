@@ -302,7 +302,6 @@ def show_dashboard():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    
     # ------------------------------------------------
     # KPIs RÉTENTION & CLV
     # ------------------------------------------------
