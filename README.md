@@ -24,5 +24,5 @@ Pour garantir le bon fonctionnement (notamment des graphiques Plotly), nous reco
 
 ### 1. Cloner le projet
 ```bash
-git clone https://github.com/BaptVic78/TinderFoodApp.git
+git clone https://github.com/BaptVic78/dataviz_Online_Retail.git
 cd dataviz_Online_Retail

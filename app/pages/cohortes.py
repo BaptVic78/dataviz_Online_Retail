@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import io
 
 from utils import (
     compute_cohort_matrix,
@@ -11,6 +12,7 @@ from utils import (
     densite,
     plot_retention_curves,
     plot_average_retention,
+    add_download_button
 )
 
 # ------------------------------------------------

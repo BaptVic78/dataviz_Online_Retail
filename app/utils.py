@@ -6,6 +6,7 @@ import seaborn as sns
 import plotly.express as px
 from datetime import datetime
 from io import BytesIO
+import io
 
 @st.cache_data
 def load_data():
@@ -99,6 +100,8 @@ def plot_retention_heatmap(cohorts_pivot):
 
     st.pyplot(fig, transparent=True, use_container_width=True)
 
+    add_download_button(fig, filename="heatmap_retention.png")
+
     with st.expander("où investir, où réduire les dépenses", expanded=False):
         col1, col2 = st.columns(2)
         with col1:
@@ -172,6 +175,8 @@ def densite(df):
             plt.setp(ax.get_legend().get_texts(), color='white')
 
     st.pyplot(fig, transparent=True, use_container_width=True)
+
+    add_download_button(fig, filename="densite_ca_par_age.png")
 
     with st.expander("Interprétation", expanded=False):
         col1, col2 = st.columns(2)
@@ -383,3 +388,19 @@ def export_figure_png(fig):
     fig.savefig(buffer, format="png", bbox_inches="tight")
     buffer.seek(0)
     return buffer
+
+def add_download_button(fig, filename="graphique.png"):
+    """Ajoute un bouton de téléchargement pour une figure Matplotlib"""
+    # 1. Sauvegarder l'image dans un buffer (mémoire vive)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches='tight', dpi=300, transparent=True)
+    buf.seek(0)
+    
+    # 2. Créer le bouton Streamlit
+    st.download_button(
+        label="📸 Télécharger ce graphique (PNG)",
+        data=buf,
+        file_name=filename,
+        mime="image/png",
+        key=filename # Clé unique importante si plusieurs boutons sur la page
+    )
